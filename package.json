@@ -1,7 +1,11 @@
 {
   "dependencies": {
+    "@types/express": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^5.1.0"
+  },
+  "scripts": {
+    "dev": "npx tsx --watch ./src/app.ts"
   },
   "type": "module"
 }
