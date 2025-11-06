@@ -1,3 +1,5 @@
+import * as cheerio from 'cheerio';
+
 export const getTokens = async () => {
     // First request to nsac to get login page and then get hidden input token
     const response = await fetch('http://200.145.153.1/nsac', {
