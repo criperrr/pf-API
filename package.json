@@ -2,10 +2,14 @@
   "dependencies": {
     "@types/express": "^5.0.4",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7"
   },
   "scripts": {
     "dev": "npx tsx --watch ./src/app.ts"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/sqlite3": "^3.1.11"
+  }
 }

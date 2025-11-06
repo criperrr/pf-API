@@ -1,0 +1,21 @@
+CREATE TABLE User (
+    id_User INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    passwordHash TEXT NOT NULL
+);
+
+CREATE TABLE NsacAccount (
+    id_NsacAccount INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+);
+
+CREATE TABLE ApiToken (
+    id_Token INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_User INTEGER NOT NULL,
+    id_NsacAccount INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    FOREIGN KEY (id_User) REFERENCES User (id_User) ON DELETE CASCADE,
+    FOREIGN KEY (id_NsacAccount) REFERENCES NsacAccount (id_NsacAccount) ON DELETE CASCADE
+);
