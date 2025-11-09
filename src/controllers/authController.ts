@@ -1,19 +1,18 @@
-import { NsacAccount, User, ApiToken, newUser } from '../models/index.js';
-
+import { newUser, User } from '../models/index.js';
 import db from '../utils/database.js';
-
+import { runSql, getSql } from '../utils/database.js';
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 
 interface ApiResponse {
     errors?: Array<Object>,
     data?: {
-        message?: string
+        message?: string,
+        userId?: number 
     }
 };
 
 function verifyEmptyFields(fields: Record<string, string>): Array<string> {
-    console.log(fields);
     let emptyFields: Array<string> = [];
     for(const key in fields){
         if(!fields[`${key}`]){
@@ -23,65 +22,74 @@ function verifyEmptyFields(fields: Record<string, string>): Array<string> {
     return emptyFields;
 }
 
-export const register = async (req: Request, res: Response) => {
-    console.log('request!')
+export async function register (req: Request, res: Response) {
     let response: ApiResponse = {
         errors: [],
         data: {}
     };
-    const userInfo: newUser = req.body;
-    const name = userInfo.name;
-    const email = userInfo.email;
-    const password = userInfo.password;
-    console.log({
-        userInfo,
-        name,
-        email,
-        password
-    })
-    let errors: Array<Object> = verifyEmptyFields({name, email, password});
-    console.log(errors);
-    if(errors.length != 0) {
-        console.log('invalid body!');
-        for(const error of errors){
-            response.errors?.push({
-                "field": `${error}`,
-                "error": `Empty field ${error}`
-            });
-        }
-        res.status(400).json(response);
-        return;
+
+    const { name, email, password }: newUser = req.body;
+
+    const emptyFields = verifyEmptyFields({ name, email, password });
+    if(emptyFields.length != 0) {
+        response.errors = emptyFields.map(field => ({
+            "field": field,
+            "error": `Empty field ${field}`
+        }));
+        return res.status(400).json(response);
     }
+
     const emailRegex = /[^\s@]+@+[^\s@]+\.+[^\s@]/;
-
-    if(emailRegex.test(email)){
-        const passHash = await bcrypt.hash(password, 10);
-
-        const stmt = db.prepare('INSERT INTO User(name, email, passwordHash) VALUES (?, ?, ?)');
-
-        stmt.run([name, email, passHash], function (err) {
-            if(err){
-                response.errors = [{
-                    "error": "Internal error, report it to a dev, please.",
-                }];
-                res.status(500).json(response);
-                return;
-
-            };
-
-        })
-        response.data = {
-            "message": "Sucess! You can now login using /login route and get your JWT token. "
-        }
-        res.status(201).json(response);
-        return;
-    } else {
+    if(!emailRegex.test(email)){
         response.errors = [{
             "field": "email",
             "error": "Invalid email"
-        }]
-        res.status(400).json(response);
-        return;
+        }];
+        return res.status(400).json(response);
+    }
+
+    try {
+        const emailExists: User = await getSql(
+            'SELECT id_User FROM User WHERE email = ?',
+            [email],
+            db
+        )
+        if(emailExists && emailExists.id_User){
+            throw new Error("User.email: UNIQUE constraint failed");
+        }
+        
+        const passHash = await bcrypt.hash(password, 8);
+
+        const lastID = await runSql(
+            'INSERT INTO User(name, email, passwordHash) VALUES (?, ?, ?)',
+            [name, email, passHash],
+            db
+        )
+
+        response.data = {
+            "message": "User created successfully!",
+            "userId": lastID
+        };
+
+        return res.status(201).json(response);
+
+    } catch (err: any) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+            response.errors = [{
+                "field": "email",
+                "error": "This email is already registered."
+            }];
+            return res.status(409).json(response);
+        }
+
+        console.error('Error during registration:', err);
+        response.errors = [{
+            "error": "Internal server error. Please report it to a dev.",
+        }];
+        return res.status(500).json(response);
     }
 }
 
+export async function login (req: Request, res: Response) {
+
+}
