@@ -98,7 +98,7 @@ Registra um novo usuário na API.
 -   **Request Body:**
    
 	   ```JSON
-	   {
+	    {
 	      "name": "Seu Nome",
 	      "email": "usuario@exemplo.com",
 	      "password": "sua_senha_forte"
@@ -130,7 +130,7 @@ Autentica um usuário e retorna um token JWT.
 	    -   200 OK: Login bem-sucedido. O token JWT é retornado no header Authorization.
 	        
 		       ``` JSON
-				   {
+			    {
 		          "message": "Logged succesfully",
 		          "userId": 1
 		        }
