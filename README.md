@@ -39,19 +39,19 @@ Scrapping é uma técnica utilizada por desenvolvedores para **coletar informaç
 ## Tecnologias utilizadas:
 
 
-![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js)
+![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js) <br>
 O [NodeJS](https://nodejs.org/en) é o ambiente de execução assíncrono que hospeda e executa toda a API. Escolhemos a versão **18+** para aproveitar as melhorias de performance e recursos mais recentes da plataforma.
 
-![TypeScript 5.x](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)
+![TypeScript 5.x](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)<br>
 O [TypeScript](https://www.typescriptlang.org/) é utilizado para tipagem estática. Ele garante um código mais robusto, fácil de depurar e previne erros comuns de JavaScript, sendo crucial para a segurança na manipulação e estruturação dos dados de *scrapping*.
 
-![Express.js 4.x](https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express)
+![Express.js 4.x](https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express)<br>
 o [Express.js](https://expressjs.com/) é o *framework* web minimalista e flexível que estrutura a **API Restful**. É responsável por rotear as requisições HTTP (GET, POST), gerenciar *middlewares* e entregar a resposta JSON final ao cliente.
 
-![Cheerio](https://img.shields.io/badge/Cheerio-:D-orange?style=for-the-badge&logo=cheerio)
+![Cheerio](https://img.shields.io/badge/Cheerio-:D-orange?style=for-the-badge&logo=cheerio)<br>
 O [Cheerio](https://cheerio.js.org/) é a biblioteca-chave para a técnica de *Scrapping*. O Cheerio **analisa o HTML** retornado pelo NSAC e fornece uma sintaxe similar ao jQuery, permitindo que o código localize e extraia as notas, médias e outros dados de forma eficiente e rápida.
 
-![SQLite 3](https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite)
+![SQLite 3](https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite)<br>
 O [SQLite3](https://sqlite.org/) é um sistema de gerenciamento de banco de dados relacional leve e sem servidor. Utilizado primariamente para **armazenamento local** de dados de configuração, *caching* de sessões ou, se aplicável, para persistir dados estruturais da aplicação.
 
 # ⚙️ Como Começar
