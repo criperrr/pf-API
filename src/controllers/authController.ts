@@ -1,9 +1,8 @@
 import { newUser, User } from "../models/index.js";
 import db from "../utils/database.js";
+import verifyEmptyFields from "../utils/emptyFields.js"
 import { runSql, getSql } from "../utils/database.js";
 import { Request, Response } from "express";
-import { configDotenv } from "dotenv";
-configDotenv();
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
@@ -21,17 +20,12 @@ interface ApiResponse {
     };
 }
 
-function verifyEmptyFields(fields: Record<string, string>): Array<string> {
-    let emptyFields: Array<string> = [];
-    for (const key in fields) {
-        if (!fields[`${key}`]) {
-            emptyFields.push(`${key}`);
-        }
-    }
-    return emptyFields;
-}
 
 export async function register(req: Request, res: Response) {
+    if (!req.body) {
+        return res.status(400).json({ error: "Missing request body" });
+    }
+
     let response: ApiResponse = {
         errors: [],
         data: {},
@@ -105,6 +99,9 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
+    if (!req.body) {
+        return res.status(400).json({ error: "Missing request body" });
+    }
     // To do; I need to learn CORS and then JWT.
     const { email, password }: User = req.body;
     let response: ApiResponse = {
@@ -128,7 +125,6 @@ export async function login(req: Request, res: Response) {
                 db
             )) ?? ({} as User); // cria um objeto vazio e força ele a "fitar" no type user. como ele é vazio, os values são vazio e as chaves tem mesmo nome das variaveis que eu to criando desestruturando ele
 
-
         const passMatch = id_User
             ? await bcrypt.compare(password, passwordHash)
             : false;
@@ -150,7 +146,7 @@ export async function login(req: Request, res: Response) {
             secretKey,
             {
                 expiresIn: "24h",
-                issuer: "Vitinho" // desculpa
+                issuer: "Vitinho", // desculpa
             }
         );
         return res

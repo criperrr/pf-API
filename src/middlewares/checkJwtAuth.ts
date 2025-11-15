@@ -13,16 +13,19 @@ export function checkJwtAuth(req: Request, res: Response, next: NextFunction) {
     console.log(jwtToken);
 
     if (!jwtToken) return res.status(401).json({ error: "No token provided." });
+
     jwt.verify(
         jwtToken,
         secretKey,
         function (err: Error | null, dec: string | jwt.JwtPayload | undefined) {
             if (err) {
                 console.log(err.name);
+
                 if (err.name == "JsonWebTokenError") {
                     res.status(403).json({ error: "Invalid Token" });
                 }
             }
+
             next("route");
         }
     );

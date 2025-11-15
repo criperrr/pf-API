@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS ApiToken (
     id_Token INTEGER PRIMARY KEY AUTOINCREMENT,
     id_User INTEGER NOT NULL,
     id_NsacAccount INTEGER NOT NULL,
-    cookie INTEGER,
+    cookieString TEXT,
     token TEXT UNIQUE NOT NULL,
     FOREIGN KEY (id_User) REFERENCES User (id_User) ON DELETE CASCADE,
     FOREIGN KEY (id_NsacAccount) REFERENCES NsacAccount (id_NsacAccount) ON DELETE CASCADE
