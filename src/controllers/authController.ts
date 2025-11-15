@@ -10,7 +10,7 @@ import bcrypt from "bcrypt";
 const secretKey: any = process.env.SECRETKEY;
 if (!secretKey) {
     console.error("FATAL ERROR: SECRETKEY is not defined in .env");
-    process.exit(1); 
+    process.exit(1);
 }
 
 interface ApiResponse {
@@ -121,11 +121,13 @@ export async function login(req: Request, res: Response) {
         return res.status(400).json(response);
     }
     try {
-        const { id_User, passwordHash }: User = await getSql<User>(
-            "SELECT id_User, passwordHash FROM User WHERE email = ?",
-            [email],
-            db
-        );
+        const { id_User, passwordHash }: User =
+            (await getSql<User>(
+                "SELECT id_User, passwordHash FROM User WHERE email = ?",
+                [email],
+                db
+            )) ?? ({} as User); // cria um objeto vazio e força ele a "fitar" no type user. como ele é vazio, os values são vazio e as chaves tem mesmo nome das variaveis que eu to criando desestruturando ele
+
 
         const passMatch = id_User
             ? await bcrypt.compare(password, passwordHash)
@@ -148,25 +150,23 @@ export async function login(req: Request, res: Response) {
             secretKey,
             {
                 expiresIn: "24h",
+                issuer: "Vitinho" // desculpa
             }
         );
         return res
-            .cookie("token", jwtToken, {
-                httpOnly: true,
-                maxAge: 24 * 60 * 60,
-            })
+            .header("Authorization", `Bearer ${jwtToken}`)
             .status(200)
             .json({
                 message: "Logged succesfully",
                 userId: id_User,
             });
-    } catch (err) {
-        console.log('internal error during login', err);
+    } catch (err: any) {
+        console.log("internal error during login", err);
         response.errors = [
             {
-                error: "Internal error"
-            }
-        ]
+                error: "Internal error",
+            },
+        ];
         return res.status(500).json(response);
     }
 }

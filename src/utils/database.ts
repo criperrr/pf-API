@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS User (
     passwordHash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTSNsacAccount (
+CREATE TABLE IF NOT EXISTS NsacAccount (
     id_NsacAccount INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS ApiToken (
     id_Token INTEGER PRIMARY KEY AUTOINCREMENT,
     id_User INTEGER NOT NULL,
     id_NsacAccount INTEGER NOT NULL,
+    cookie INTEGER,
     token TEXT UNIQUE NOT NULL,
     FOREIGN KEY (id_User) REFERENCES User (id_User) ON DELETE CASCADE,
     FOREIGN KEY (id_NsacAccount) REFERENCES NsacAccount (id_NsacAccount) ON DELETE CASCADE
@@ -28,10 +29,11 @@ const db = new sqlite3.Database(databaseLocation, (err) => {
     if (err) throw new Error("Failed to connect to db: " + err);
 
     console.log("Connected!");
-    runSql(creationQueries, [], db);
 });
 
-export function runSql(
+runSql(creationQueries, [], db);
+
+export async function runSql(
     sql: string,
     params: Array<string>,
     connection: sqlite3.Database
@@ -46,12 +48,11 @@ export function runSql(
     });
 }
 
-export function getSql<T>(
+export async function getSql<T>(
     sql: string,
     params: Array<string>,
     connection: sqlite3.Database
-): Promise<T> 
-{
+): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         connection.get(sql, params, (err, row: T | undefined) => {
             if (err) return reject(err);
