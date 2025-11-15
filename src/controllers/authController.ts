@@ -137,7 +137,6 @@ export async function login(req: Request, res: Response) {
                     error: "Invalid email or password.",
                 },
             ];
-            console.log({ id_User, password, ...req.body });
             return res.status(401).json(response);
         }
 
@@ -151,7 +150,6 @@ export async function login(req: Request, res: Response) {
                 expiresIn: "24h",
             }
         );
-        console.log(jwtToken);
         return res
             .cookie("token", jwtToken, {
                 httpOnly: true,
