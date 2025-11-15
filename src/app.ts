@@ -1,7 +1,7 @@
 import e,{ Express } from "express";
 import "dotenv/config";
-import exampleRoutes from './routes/v1/exampleRoutes.js';
 import authRoutes from './routes/v1/authRoutes.js';
+import nsacRoutes from './routes/v1/nsacRoutes.js';
 
 const app: Express = e();
 app.use(e.json())
@@ -13,6 +13,6 @@ app.listen(port, () => {
     console.log(`RUNNING at ${port}`);
 })
 
-app.use('/api/tests', exampleRoutes);
+app.use('/api/nsac', nsacRoutes)
 app.use('/api/auth', authRoutes);
 
