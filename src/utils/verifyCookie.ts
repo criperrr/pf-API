@@ -1,6 +1,6 @@
 import { NsacAccount } from "../models/nsacAccount.js";
 import { encrypt } from "./crypto.js";
-import db, { getSql, runSql } from "./database.js";
+import db, { queryOne, runSql } from "./database.js";
 import { login } from "./loginNsac.js";
 
 export async function verifyCookie(
@@ -20,7 +20,7 @@ export async function verifyCookie(
     else {
         if (APIToken) {
             try {
-                const { email, password } = await getSql<NsacAccount>(
+                const { email, password } = await queryOne<NsacAccount>(
                     `SELECT
                         NA.email,
                         NA.password

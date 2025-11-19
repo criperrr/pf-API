@@ -8,8 +8,8 @@ router.use("/accounts", checkJwtAuth);
 router.use("/grades", checkApiKeyAuth);
 
 router.post("/accounts", nsacController.createToken);
-// router.get("/accounts", nsacController.getTokens);
-// router.delete("/accounts", nsacController.deleteTokens);
+router.get("/accounts", nsacController.getTokens);
+router.delete("/accounts", nsacController.deleteTokens);
 
 // router.get("/grades/class", nsacController.getClassGrades);
 // router.get("/grades/private", nsacController.getPrivateGrades);

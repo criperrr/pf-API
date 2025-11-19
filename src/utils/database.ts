@@ -48,12 +48,12 @@ export async function runSql(
     return new Promise<number>((resolve, reject) => {
         connection.run(sql, params, function (err: any) {
             if (err) return reject(err);
-            resolve(this.lastID);
+            resolve(this.changes);
         });
     });
 }
 
-export async function getSql<T>(
+export async function queryOne<T>(
     sql: string,
     params: Array<string>,
     connection: sqlite3.Database
@@ -62,6 +62,19 @@ export async function getSql<T>(
         connection.get(sql, params, (err, row: T | undefined) => {
             if (err) return reject(err);
             resolve(row as T);
+        });
+    });
+}
+
+export async function getSql<T>(
+    sql: string,
+    params: Array<string>,
+    connection: sqlite3.Database
+): Promise<T[]> {
+    return new Promise<T[]>((resolve, reject) => {
+        connection.all(sql, params, (err, rows: T[] | undefined) => {
+            if (err) return reject(err);
+            resolve(rows as T[]);
         });
     });
 }

@@ -1,7 +1,6 @@
 import { newUser, User } from "../models/index.js";
-import db from "../utils/database.js";
+import db, { queryOne, runSql } from "../utils/database.js";
 import verifyEmptyFields from "../utils/emptyFields.js";
-import { runSql, getSql } from "../utils/database.js";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -53,7 +52,7 @@ export async function register(req: Request, res: Response) {
     }
 
     try {
-        const emailExists: User = await getSql<User>(
+        const emailExists: User = await queryOne<User>(
             "SELECT id_User FROM User WHERE email = ?",
             [email],
             db
@@ -118,7 +117,7 @@ export async function login(req: Request, res: Response) {
     }
     try {
         const { id_User, passwordHash }: User =
-            (await getSql<User>(
+            (await queryOne<User>(
                 "SELECT id_User, passwordHash FROM User WHERE email = ?",
                 [email],
                 db
