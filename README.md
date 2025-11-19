@@ -95,7 +95,7 @@ Endpoints para criar e logar usuários **na API** (não no NSAC).
 Cria um novo usuário para utilizar a API.
 
 - **Body:**
-   ```json
+   ```jsonc
    {
      "name": "Seu Nome",
      "email": "dev@exemplo.com",
@@ -113,7 +113,7 @@ Cria um novo usuário para utilizar a API.
 Autentica e retorna um **Token JWT** (Bearer Token) necessário para usar as rotas do NSAC.
 
 - **Body:**
-    ```json
+    ```jsonc
     {
       "email": "dev@exemplo.com",
       "password": "senha_forte_da_api"
@@ -135,7 +135,7 @@ Endpoints para interagir com o portal acadêmico.
 Realiza o login no portal NSAC, captura os cookies, criptografa-os e gera um **APIToken**.
 
 - **Body:**
-    ```json
+    ```jsonc
     {
       "email": "aluno@nsac.unesp.br",
       "password": "senha_do_portal_nsac"
@@ -159,7 +159,7 @@ Retorna os tokens de API associados ao seu usuário.
 Remove o vínculo de uma conta NSAC.
 
 - **Body:**
-    ```json
+    ```jsonc
     {
       "token": "SEU_APITOKEN_AQUI"
     }
@@ -175,7 +175,7 @@ Abaixo estão as rotas para consulta de notas.
 > **Nota Técnica:** Estes endpoints utilizam o método `GET`, mas esperam os parâmetros `APIToken` e `ano` dentro do **Body (JSON)** da requisição. Certifique-se de que seu cliente HTTP suporta o envio de corpo em requisições GET.
 
 **Parâmetros do Body (para todas as rotas abaixo):**
-```json
+```jsonc
 {
   "APIToken": "SEU_APITOKEN_AQUI",
   "ano": 3
@@ -189,7 +189,7 @@ Abaixo estão as rotas para consulta de notas.
 Retorna **todos** os dados disponíveis (notas gerais da turma, notas do aluno e hashes de validação). Útil para ter uma visão geral completa.
 
 - **Resposta (200 OK):**
-  ```json
+  ```jsonc
   {
     "data": {
         "gradesLenght": 15,
@@ -208,7 +208,7 @@ Retorna **todos** os dados disponíveis (notas gerais da turma, notas do aluno e
 Retorna apenas as notas gerais (médias da sala).
 
 - **Resposta (200 OK):**
-  ```json
+  ```jsonc
   {
     "data": {
         "generalHashes": ["hash1", "hash2"...],
@@ -232,7 +232,7 @@ Retorna apenas as notas gerais (médias da sala).
 Retorna apenas as notas específicas do aluno logado.
 
 - **Resposta (200 OK):**
-  ```json
+  ```jsonc
   {
     "data": {
         "userCurrentYear": 3,
