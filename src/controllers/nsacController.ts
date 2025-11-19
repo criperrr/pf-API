@@ -199,9 +199,9 @@ export async function deleteTokens(req: Request, res: Response) {
         } else {
             response.errors = [
                 {
-                    error: "Nothing was changed (wrong API Key?)"
-                }
-            ]
+                    error: "Nothing was changed (wrong API Key?)",
+                },
+            ];
             return res.status(404).json(response);
         }
     } catch (err) {
@@ -220,7 +220,14 @@ export async function getClassGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.body;
+    const { APIToken, ano } = req.query as {
+        APIToken: string;
+        ano: string;
+    };
+    if (!APIToken || !ano) {
+        return res.status(400).json({ error: "Faltando parametros na URL" });
+    }
+    const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
             "SELECT cookieString FROM ApiToken WHERE token = ?",
@@ -229,12 +236,12 @@ export async function getClassGrades(req: Request, res: Response) {
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
         if (!grades) throw new Error();
 
         response.data = {
             generalHashes: grades.generalHashes,
-            ...grades.generalGrades,
+            generalGrades: grades.generalGrades,
         };
 
         res.status(200).json(response);
@@ -254,7 +261,14 @@ export async function getPrivateGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.body;
+    const { APIToken, ano } = req.query as {
+        APIToken: string;
+        ano: string;
+    };
+    if (!APIToken || !ano) {
+        return res.status(400).json({ error: "Faltando parametros na URL" });
+    }
+    const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
             "SELECT cookieString FROM ApiToken WHERE token = ?",
@@ -263,13 +277,13 @@ export async function getPrivateGrades(req: Request, res: Response) {
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
         if (!grades) throw new Error();
 
         response.data = {
             userCurrentYear: grades.userCurrentYear,
             userHashes: grades.userHashes,
-            ...grades.userGrades,
+            userGrades: grades.userGrades,
         };
 
         res.status(200).json(response);
@@ -291,7 +305,14 @@ export async function getAllGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.body;
+    const { APIToken, ano } = req.query as {
+        APIToken: string;
+        ano: string;
+    };
+    if (!APIToken || !ano) {
+        return res.status(400).json({ error: "Faltando parametros na URL" });
+    }
+    const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
             "SELECT cookieString FROM ApiToken WHERE token = ?",
@@ -300,7 +321,7 @@ export async function getAllGrades(req: Request, res: Response) {
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
         if (!grades) throw new Error();
 
         response.data = {

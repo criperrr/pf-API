@@ -11,8 +11,8 @@ router.post("/accounts", nsacController.createToken);
 router.get("/accounts", nsacController.getTokens);
 router.delete("/accounts", nsacController.deleteTokens);
 
-// router.get("/grades/class", nsacController.getClassGrades);
-// router.get("/grades/private", nsacController.getPrivateGrades);
+router.get("/grades/class", nsacController.getClassGrades);
+router.get("/grades/private", nsacController.getPrivateGrades);
 router.get("/grades", nsacController.getAllGrades);
 
 export default router;
