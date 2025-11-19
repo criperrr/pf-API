@@ -1,8 +1,7 @@
-import { configDotenv } from "dotenv";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-configDotenv();
 const secretKey: any = process.env.SECRETKEY;
+
 if (!secretKey) {
     console.error("FATAL ERROR: SECRETKEY is not defined in .env");
     process.exit(1);

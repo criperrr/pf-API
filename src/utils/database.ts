@@ -1,19 +1,23 @@
 import sqlite3 from "sqlite3";
 const databaseLocation = ":memory:";
-const creationQueries = `
+const createUserTable = `
 CREATE TABLE IF NOT EXISTS User (
     id_User INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     passwordHash TEXT NOT NULL
 );
+`;
 
+const createNsacAccountTable = `
 CREATE TABLE IF NOT EXISTS NsacAccount (
     id_NsacAccount INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
+`;
 
+const createApiTokenTable = `
 CREATE TABLE IF NOT EXISTS ApiToken (
     id_Token INTEGER PRIMARY KEY AUTOINCREMENT,
     id_User INTEGER NOT NULL,
@@ -30,9 +34,12 @@ const db = new sqlite3.Database(databaseLocation, (err) => {
     console.log("Connected!");
 });
 
-export async function ensureDbCreated(): Promise<void>{
-    await runSql(creationQueries, [], db);
+export async function ensureDbCreated() {
+    await runSql(createUserTable, [], db);
+    await runSql(createNsacAccountTable, [], db);
+    await runSql(createApiTokenTable, [], db);
 }
+
 export async function runSql(
     sql: string,
     params: Array<string>,
@@ -40,9 +47,7 @@ export async function runSql(
 ): Promise<number> {
     return new Promise<number>((resolve, reject) => {
         connection.run(sql, params, function (err: any) {
-            if (err) {
-                return reject(err);
-            }
+            if (err) return reject(err);
             resolve(this.lastID);
         });
     });

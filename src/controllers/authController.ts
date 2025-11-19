@@ -1,6 +1,6 @@
 import { newUser, User } from "../models/index.js";
 import db from "../utils/database.js";
-import verifyEmptyFields from "../utils/emptyFields.js"
+import verifyEmptyFields from "../utils/emptyFields.js";
 import { runSql, getSql } from "../utils/database.js";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -19,7 +19,6 @@ interface ApiResponse {
         userId?: number;
     };
 }
-
 
 export async function register(req: Request, res: Response) {
     if (!req.body) {

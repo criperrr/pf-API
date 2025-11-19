@@ -2,8 +2,12 @@ import { Request, Response } from "express";
 import { login } from "../utils/loginNsac.js";
 import verifyEmptyFields from "../utils/emptyFields.js";
 import { encrypt, generateRandomString } from "../utils/crypto.js";
-import db, { ensureDbCreated, runSql } from "../utils/database.js";
-
+import db, { getSql, runSql } from "../utils/database.js";
+import { ApiToken } from "../models/ApiToken.js";
+import jwt from "jsonwebtoken";
+const secretKey: any = process.env.SECRETKEY;
+import { getGrades } from "../utils/getGrades.js";
+import { decrypt } from "../utils/crypto.js";
 // router.post("/accounts", checkJwtAuth, nsacController.createToken);
 // router.get("/accounts", checkJwtAuth, nsacController.getTokens);
 // router.delete("/accounts", checkJwtAuth, nsacController.deleteTokens);
@@ -28,6 +32,11 @@ interface ApiResponse {
     };
 }
 
+interface jwtTokenPayload {
+    id_User: string;
+    email: string;
+}
+
 export async function createToken(req: Request, res: Response) {
     if (!req.body) {
         return res.status(400).json({ error: "Missing request body" });
@@ -37,12 +46,10 @@ export async function createToken(req: Request, res: Response) {
         data: {},
     };
 
-    const { email, password, userId } = req.body as nsacAccountRequest;
-    console.log({
-        email,
-        // password,
-        userId,
-    });
+    const { email, password } = req.body as nsacAccountRequest;
+    const jwtToken = req.headers.authorization?.split(" ")[1] as string;
+    const payload = jwt.decode(jwtToken) as jwtTokenPayload;
+    const userId = payload.id_User;
 
     const emptyFields = verifyEmptyFields({ email, password, userId });
     if (emptyFields.length != 0) {
@@ -55,7 +62,6 @@ export async function createToken(req: Request, res: Response) {
 
     try {
         const loginNsac = await login(email, password);
-        console.log(loginNsac);
 
         if (!loginNsac) {
             response = {
@@ -70,22 +76,16 @@ export async function createToken(req: Request, res: Response) {
 
         const encryptedPassword = encrypt(password);
         const encryptedCookie = encrypt(loginNsac);
-        const apiToken = generateRandomString(20);
-        console.log({
-            encryptedPassword,
-            encryptedCookie,
-            apiToken
-        });
+        const apiToken = generateRandomString(32).toUpperCase();
 
-        await ensureDbCreated();
         const nsacAccountId = await runSql(
             "INSERT INTO NsacAccount(email, password) VALUES (?, ?)",
             [email, encryptedPassword],
             db
         );
-        
+
         if (!nsacAccountId) throw new Error("Failed to insert NsacAccount");
-        
+
         const apiTokenId = await runSql(
             "INSERT INTO ApiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?)",
             [
@@ -107,13 +107,21 @@ export async function createToken(req: Request, res: Response) {
         response.errors = [];
 
         return res.status(200).json(response);
-    } catch (err) {
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
-        console.log(err)
+    } catch (err: any) {
+        if (err.message.contains("Unique")) {
+            response.errors = [
+                {
+                    error: "Already registered email.",
+                },
+            ];
+        } else {
+            response.errors = [
+                {
+                    error: "Internal server error",
+                },
+            ];
+        }
+        console.log(err);
         return res.status(500).json(response);
     }
 }
@@ -122,8 +130,110 @@ export async function getTokens(req: Request, res: Response) {}
 
 export async function deleteTokens(req: Request, res: Response) {}
 
-export async function getClassGrades(req: Request, res: Response) {}
+export async function getClassGrades(req: Request, res: Response) {
+    let response = {
+        errors: [{ error: "" }],
+        data: {},
+    };
+    const { APIToken, ano } = req.body;
+    try {
+        const { cookieString } = await getSql<ApiToken>(
+            "SELECT cookieString FROM ApiToken WHERE token = ?",
+            [APIToken],
+            db
+        );
+        const decryptedCookies = decrypt(cookieString);
 
-export async function getPrivateGrades(req: Request, res: Response) {}
+        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        if (!grades) throw new Error();
 
-export async function getAllGrades(req: Request, res: Response) {}
+        response.data = {
+            generalHashes: grades.generalHashes,
+            ...grades.generalGrades,
+        };
+
+        res.status(200).json(response);
+    } catch (err) {
+        console.log(err);
+
+        response.errors = [
+            {
+                error: "Internal server error",
+            },
+        ];
+        console.log(err);
+        return res.status(500).json(response);
+    }
+}
+
+export async function getPrivateGrades(req: Request, res: Response) {
+    let response = {
+        errors: [{ error: "" }],
+        data: {},
+    };
+    const { APIToken, ano } = req.body;
+    try {
+        const { cookieString } = await getSql<ApiToken>(
+            "SELECT cookieString FROM ApiToken WHERE token = ?",
+            [APIToken],
+            db
+        );
+        const decryptedCookies = decrypt(cookieString);
+
+        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        if (!grades) throw new Error();
+
+        response.data = {
+            userCurrentYear: grades.userCurrentYear,
+            userHashes: grades.userHashes,
+            ...grades.userGrades,
+        };
+
+        res.status(200).json(response);
+    } catch (err) {
+        console.log(err);
+
+        response.errors = [
+            {
+                error: "Internal server error",
+            },
+        ];
+        console.log(err);
+        return res.status(500).json(response);
+    }
+}
+
+export async function getAllGrades(req: Request, res: Response) {
+    let response = {
+        errors: [{ error: "" }],
+        data: {},
+    };
+    const { APIToken, ano } = req.body;
+    try {
+        const { cookieString } = await getSql<ApiToken>(
+            "SELECT cookieString FROM ApiToken WHERE token = ?",
+            [APIToken],
+            db
+        );
+        const decryptedCookies = decrypt(cookieString);
+
+        const grades = await getGrades(decryptedCookies, ano, APIToken);
+        if (!grades) throw new Error();
+
+        response.data = {
+            ...grades,
+        };
+
+        res.status(200).json(response);
+    } catch (err) {
+        console.log(err);
+
+        response.errors = [
+            {
+                error: "Internal server error",
+            },
+        ];
+        console.log(err);
+        return res.status(500).json(response);
+    }
+}

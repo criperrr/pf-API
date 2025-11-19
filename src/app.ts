@@ -2,7 +2,7 @@ import e, { Express } from "express";
 import "dotenv/config";
 import { ensureDbCreated } from "./utils/database.js";
 (async () => {
-    ensureDbCreated();
+    await ensureDbCreated();
 })();
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
