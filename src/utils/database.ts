@@ -27,12 +27,12 @@ CREATE TABLE IF NOT EXISTS ApiToken (
 
 const db = new sqlite3.Database(databaseLocation, (err) => {
     if (err) throw new Error("Failed to connect to db: " + err);
-
     console.log("Connected!");
 });
 
-runSql(creationQueries, [], db);
-
+export async function ensureDbCreated(): Promise<void>{
+    await runSql(creationQueries, [], db);
+}
 export async function runSql(
     sql: string,
     params: Array<string>,

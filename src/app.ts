@@ -1,7 +1,11 @@
-import e,{ Express } from "express";
+import e, { Express } from "express";
 import "dotenv/config";
-import authRoutes from './routes/v1/authRoutes.js';
-import nsacRoutes from './routes/v1/nsacRoutes.js';
+import { ensureDbCreated } from "./utils/database.js";
+(async () => {
+    ensureDbCreated();
+})();
+import authRoutes from "./routes/v1/authRoutes.js";
+import nsacRoutes from "./routes/v1/nsacRoutes.js";
 
 const app: Express = e();
 
@@ -12,8 +16,7 @@ const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
     console.log(`RUNNING at ${port}`);
-})
+});
 
-app.use('/api/nsac', nsacRoutes)
-app.use('/api/auth', authRoutes);
-
+app.use("/api/nsac", nsacRoutes);
+app.use("/api/auth", authRoutes);

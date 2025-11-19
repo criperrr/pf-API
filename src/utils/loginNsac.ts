@@ -7,24 +7,31 @@ interface Tokens {
 }
 
 export async function getTokens(): Promise<Tokens> {
+    // Isso serve pra capturar os tokens escondidos na pagina de login do NSAC (http://200.145.153.1/nsac).
+    // Faz uma request inicial pra pegar o HTML INTEIRO
     const response = await fetch("http://200.145.153.1/nsac", {
         method: "GET",
     });
 
+    // Pego os cookies do header da response (cookie de sessão temporário)
     const cookies = response.headers
         .getSetCookie()
         .map((value) => value.split(";")[0]) as string[];
 
+    // Se não encontrado, lança uma exceção; isso pode ocorrer se o NSAC mudar algo no site, exigindo uma adaptação no código OU se o site estiver desligado (o que pode acontecer depois da meia noite)
     if (cookies.length < 2 || !cookies[0] || !cookies[1]) {
         throw new Error(
             "Tokens de sessão (xsrf ou nsaconline) não encontrados na resposta."
         );
     }
 
+    // Captura o HTML; o PHP só devolve o HTML inteiro na resposta, no body.
     const html = await response.text();
 
+    // Carrega a árvore do html na ram pelo cheerio.
     const $ = cheerio.load(html);
 
+    // O token escondido EXIGIDO para enviar o email e senha, sem ele o NSAC recusa totalmente.
     const hiddenToken = $('input[name="_token"]').val() as string | undefined; // Se retornar um undefined é pq o site do NSAC explodiu e mudou rota ou sla explodiu mesmo
 
     if (!hiddenToken) {
@@ -33,7 +40,9 @@ export async function getTokens(): Promise<Tokens> {
         );
     }
 
+    // Cookie pra evitar que o servidor identifique como ataque XSRF. Eles usam a técnica "Double Submit Cookie". Ele é enviado no header
     const xsrf = cookies[0];
+    // Cookie de sessão temporário
     const nsaconline = cookies[1];
     return {
         xsrf,
@@ -45,11 +54,13 @@ export async function getTokens(): Promise<Tokens> {
 export async function login(
     email: string,
     password: string
-): Promise<string | boolean> {
+): Promise<string | false> {
+    // Retorna a string que o NSAC aceita para autenticar direto (Cookie de sessão do PHP) OU falso caso o NSAC recuse o login
     const cookies = await getTokens();
 
     let xsrf = cookies.xsrf;
     let nsaconline = cookies.nsaconline;
+    // Essa string é usada pra enviar o email e senha pra pegar o cookie de sessão valido pra eles. Prova que não é ataque XSRF (junto do hidden token)
     let cookiesString = `${xsrf}; ${nsaconline}`;
 
     const hiddenToken = cookies.hiddenToken;
@@ -64,7 +75,7 @@ export async function login(
             Referer: "http://200.145.153.1/nsac/",
             Cookie: cookiesString,
         },
-        body: `${authString}&remember=on`,
+        body: `${authString}&remember=on`, // Aparentemente ele salva por 5 anos inteiros kkk, ent provavelmente o usuario e senha não serão uteis, mas generalizando totalemente, o melhor é manter, criptografados.
         method: "POST",
         redirect: "manual",
     });
@@ -82,7 +93,7 @@ export async function login(
         },
         method: "GET",
         redirect: "manual",
-    }); // test if server let me log in
+    }); // Faz o teste final pra ver se o cookie gerado pelo servidor é válido mesmo, acho que praticamente nunca isso vai falhar, se ele receber os cookies.
 
     if (responseLogin.status == 302 && responseTest.status == 200) {
         return newCookiesString;
