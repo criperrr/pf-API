@@ -7,6 +7,7 @@ export async function checkApiKeyAuth(
     next: NextFunction
 ) {
     const APIToken = req.headers["x-api-token"] as string;
+    console.log("oi: " + APIToken)
 
     if (!APIToken)
         return res.status(401).json({ error: "No API Token provided." });
@@ -19,7 +20,7 @@ export async function checkApiKeyAuth(
         );
         console.log(apiTokenId);
         if (apiTokenId > 0) {
-            next("route");
+            next();
         } else {
             return res.status(401).json({ error: "Invalid API Token." });
         }

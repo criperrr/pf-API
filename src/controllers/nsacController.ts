@@ -160,6 +160,30 @@ export async function getTokens(req: Request, res: Response) {
     }
 }
 
+export async function checkApiKeyAuth(req: Request, res: Response) {
+    const APIToken = req.headers["x-api-token"] as string;
+
+    if (!APIToken)
+        return res.status(401).json({ error: "No API Token provided." });
+
+    try {
+        const apiTokenId = await runSql(
+            "SELECT * FROM ApiToken WHERE token = ?",
+            [APIToken],
+            db
+        );
+        console.log(apiTokenId);
+        if (apiTokenId > 0) {
+            return res.status(200).json({ data: { message: "Valid token!" } });
+        } else {
+            return res.status(401).json({ error: "Invalid API Token." });
+        }
+    } catch (err: any) {
+        console.log(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
 export async function deleteTokens(req: Request, res: Response) {
     if (!req.body) {
         return res.status(400).json({ error: "Missing request body" });
