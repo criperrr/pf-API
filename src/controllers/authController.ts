@@ -100,8 +100,9 @@ export async function login(req: Request, res: Response) {
     if (!req.body) {
         return res.status(400).json({ error: "Missing request body" });
     }
-    // To do; I need to learn CORS and then JWT.
+
     const { email, password }: User = req.body;
+    console.log({ email, password });
     let response: ApiResponse = {
         errors: [],
         data: {},
@@ -122,7 +123,7 @@ export async function login(req: Request, res: Response) {
                 [email],
                 db
             )) ?? ({} as User); // cria um objeto vazio e força ele a "fitar" no type user. como ele é vazio, os values são vazio e as chaves tem mesmo nome das variaveis que eu to criando desestruturando ele
-
+        console.log({ id_User, passwordHash });
         const passMatch = id_User
             ? await bcrypt.compare(password, passwordHash)
             : false;
@@ -147,6 +148,7 @@ export async function login(req: Request, res: Response) {
                 issuer: "Vitinho", // desculpa
             }
         );
+        console.log({ jwtToken });
         return res
             .header("Authorization", `Bearer ${jwtToken}`)
             .status(200)

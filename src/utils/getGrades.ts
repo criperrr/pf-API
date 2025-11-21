@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import hash from "object-hash";
 import { verifyCookie } from "./verifyCookie.js";
+import { log } from "console";
 
 function chunkArray(array: Array<any>, size: number) {
     const result = [];
@@ -10,11 +11,15 @@ function chunkArray(array: Array<any>, size: number) {
     return result;
 }
 
-export async function getGrades(logToken: string, ano: number, APIToken?: string) {
+export async function getGrades(
+    logToken: string,
+    ano: number,
+    APIToken?: string
+) {
     const testTokenResult = await verifyCookie(logToken, APIToken);
 
-    if(testTokenResult == false){
-        return false
+    if (testTokenResult == false) {
+        return false;
     } else {
         logToken = testTokenResult;
     }
@@ -34,7 +39,14 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
     const $ = cheerio.load(boletimHtml);
     const userCurrentYear = $("table").length; // quantidade de tabelas = ano atual (3 tabelas = 3 anos)
     const anoIndex = userCurrentYear - ano;
-    if(ano > userCurrentYear) throw new Error(`Invalid year URL parameter. User current in year ${userCurrentYear}`)
+    if (isNaN(ano) || !ano) ano = userCurrentYear;
+    if (ano > userCurrentYear) ano = userCurrentYear;
+    console.log({
+        logToken,
+        ano,
+        APIToken,
+        userCurrentYear
+    })
 
     const topTable = $("table")[anoIndex] ?? $("table")[0];
     const tBody = $(topTable).find("tbody tr");
@@ -55,7 +67,7 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
         .map((value) => value.trim().replace(/[A-Za-z* ]+/g, "-"));
 
     let badGrades: Array<string> = [];
-    let userArray: Array<Array<string>> = [[]];
+    let userArray: Array<Array<string>> = [];
 
     $(tBody)
         .find("td")
@@ -78,8 +90,8 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
     let grades: Array<object> = [];
     let finalUserGrades: Array<object> = [];
     let hashes: Array<string> = [];
-     let userHashes: Array<string> = [];
-    
+    let userHashes: Array<string> = [];
+
     if (titles.length != finalGrades.length) return false;
     else {
         for (let i = 0; i < finalGrades.length; i++) {
@@ -92,7 +104,7 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
                 grades: userArray[i],
             });
             hashes[i] = hash(grades[i] as hash.NotUndefined);
-            userHashes[i] = hash(userGrades[i] as hash.NotUndefined)
+            userHashes[i] = hash(userGrades[i] as hash.NotUndefined);
         }
     }
 
@@ -102,6 +114,6 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
         generalHashes: hashes,
         userGrades: finalUserGrades,
         userCurrentYear: userCurrentYear,
-        userHashes: userHashes
+        userHashes: userHashes,
     };
 }

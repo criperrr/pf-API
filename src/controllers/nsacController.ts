@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 import verifyEmptyFields from "../utils/emptyFields.js";
 import { encrypt, generateRandomString, decrypt } from "../utils/crypto.js";
-import db, { getSql, runSql, queryOne } from "../utils/database.js";
+import db, { getSql, runSql, queryOne, insertSql } from "../utils/database.js";
 import { ApiToken } from "../models/ApiToken.js";
 import { login } from "../utils/loginNsac.js";
 import { getGrades } from "../utils/getGrades.js";
@@ -45,7 +45,14 @@ export async function createToken(req: Request, res: Response) {
 
     const { email, password } = req.body as nsacAccountRequest;
     const jwtToken = req.headers.authorization?.split(" ")[1] as string;
+
     const payload = jwt.decode(jwtToken) as jwtTokenPayload;
+
+    if (!payload || !payload.id_User) {
+        return res
+            .status(401)
+            .json({ errors: [{ error: "Invalid JWT Token" }] });
+    }
     const userId = payload.id_User;
 
     const emptyFields = verifyEmptyFields({ email, password, userId });
@@ -58,28 +65,46 @@ export async function createToken(req: Request, res: Response) {
     }
 
     try {
+        // 1. Valida se as credenciais funcionam no sistema NSAC
         const loginNsac = await login(email, password);
 
         const encryptedPassword = encrypt(password);
         const encryptedCookie = encrypt(loginNsac);
         const apiToken = generateRandomString(32).toUpperCase();
 
-        const nsacAccountId = await runSql(
-            "INSERT INTO NsacAccount(email, password) VALUES (?, ?)",
-            [email, encryptedPassword],
+        let nsacAccountId: number;
+
+        // 2. VERIFICAÇÃO (Sem Update)
+        // Buscamos se o email já existe no banco
+        const existingAccount = await queryOne<{ id_NsacAccount: number }>(
+            "SELECT id_NsacAccount FROM NsacAccount WHERE email = ?",
+            [email],
             db
         );
 
-        if (!nsacAccountId) throw new Error("Failed to insert NsacAccount");
+        if (existingAccount) {
+            console.log("Email já registrado. Usando ID existente.");
+            nsacAccountId = existingAccount.id_NsacAccount;
+        } else {
+            nsacAccountId = await insertSql(
+                "INSERT INTO NsacAccount(email, password) VALUES (?, ?)",
+                [email, encryptedPassword],
+                db
+            );
+            console.log("Novo email registrado.");
+        }
 
-        const apiTokenId = await runSql(
+        if (!nsacAccountId) throw new Error("Failed to resolve NsacAccount ID");
+
+        await runSql(
+            "DELETE FROM apiToken WHERE id_User = ? AND id_NsacAccount = ?",
+            [userId, nsacAccountId.toString()],
+            db
+        );
+
+        const apiTokenId = await insertSql(
             "INSERT INTO apiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?)",
-            [
-                userId.toString(),
-                nsacAccountId.toString(),
-                encryptedCookie,
-                apiToken,
-            ],
+            [userId, nsacAccountId, encryptedCookie, apiToken],
             db
         );
 
@@ -94,26 +119,20 @@ export async function createToken(req: Request, res: Response) {
 
         return res.status(200).json(response);
     } catch (err: any) {
-        if (err.message.includes("UNIQUE constraint failed")) {
-            response.errors = [
-                {
-                    error: "Already registered email.",
-                },
-            ];
-        } else if (err.message.includes("Wrong NSAC email or password")) {
-            response.errors = [
-                {
-                    error: "Wrong NSAC email or password",
-                },
-            ];
-        } else {
-            response.errors = [
-                {
-                    error: "Internal server error",
-                },
-            ];
-        }
         console.log(err);
+
+        if (err.message && err.message.includes("UNIQUE constraint failed")) {
+            response.errors = [{ error: "Internal conflict error." }];
+        } else if (
+            err.message &&
+            err.message.includes("Wrong NSAC email or password")
+        ) {
+            response.errors = [{ error: "Wrong NSAC email or password" }];
+            return res.status(500).json(response);
+        } else {
+            response.errors = [{ error: "Internal server error" }];
+        }
+
         return res.status(500).json(response);
     }
 }
@@ -246,11 +265,18 @@ export async function getClassGrades(req: Request, res: Response) {
     }
     const anoNumero = Number(ano);
     try {
-        const { cookieString } = await queryOne<ApiToken>(
+        const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
             db
         );
+
+        if (!tokenData) {
+            return res
+                .status(401)
+                .json({ error: "Token inválido ou não encontrado." });
+        }
+        const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
         const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
@@ -286,11 +312,18 @@ export async function getPrivateGrades(req: Request, res: Response) {
     }
     const anoNumero = Number(ano);
     try {
-        const { cookieString } = await queryOne<ApiToken>(
+        const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
             db
         );
+
+        if (!tokenData) {
+            return res
+                .status(401)
+                .json({ error: "Token inválido ou não encontrado." });
+        }
+        const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
         const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
@@ -331,11 +364,19 @@ export async function getAllGrades(req: Request, res: Response) {
     }
     const anoNumero = Number(ano);
     try {
-        const { cookieString } = await queryOne<ApiToken>(
+        const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
             db
         );
+
+        if (!tokenData) {
+            return res
+                .status(401)
+                .json({ error: "Token inválido ou não encontrado." });
+        }
+        const { cookieString } = tokenData;
+
         const decryptedCookies = decrypt(cookieString);
 
         const grades = await getGrades(decryptedCookies, anoNumero, apiToken);

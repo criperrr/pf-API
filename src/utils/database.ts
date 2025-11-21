@@ -66,6 +66,19 @@ export async function queryOne<T>(
     });
 }
 
+export async function insertSql(
+    sql: string,
+    params: Array<any>,
+    connection: sqlite3.Database
+): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+        connection.run(sql, params, function (err: any) {
+            if (err) return reject(err);
+            resolve(this.lastID);
+        });
+    });
+}
+
 export async function getSql<T>(
     sql: string,
     params: Array<string>,
