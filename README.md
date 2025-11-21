@@ -1,11 +1,11 @@
 <h1 align="center">NSAC Scraping API</h1>
  
 <div align="center">
-    <img src="[https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js)" alt="Node.js Badge">
-    <img src="[https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)" alt="TypeScript Badge">
-    <img src="[https://img.shields.io/badge/Express.js-5.x-lightgrey?style=for-the-badge&logo=express](https://img.shields.io/badge/Express.js-5.x-lightgrey?style=for-the-badge&logo=express)" alt="Express.js Badge">
-    <img src="[https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite](https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite)" alt="SQLite Badge">
-    <img src="[https://img.shields.io/badge/Cheerio-:)-orange?style=for-the-badge&logo=cheerio](https://img.shields.io/badge/Cheerio-:)-orange?style=for-the-badge&logo=cheerio)" alt="Cheerio Badge">
+    <img src="https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js" alt="Node.js Badge">
+    <img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript" alt="TypeScript Badge">
+    <img src="https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express" alt="Express.js Badge">
+    <img src="https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite" alt="SQLite Badge">
+    <img src="https://img.shields.io/badge/Cheerio-:)-orange?style=for-the-badge&logo=cheerio" alt="Cheerio Badge">
 </div>
 
 # O que é esse projeto?
@@ -14,15 +14,46 @@ Este projeto consiste em uma **API RESTful** robusta, desenvolvida utilizando **
 
 Nosso foco é solucionar um desafio enfrentado pela comunidade acadêmica: a dificuldade de acesso e uso automatizado dos dados fornecidos pelo **NSAC Online**.
 
-O NSAC Online é a **única** plataforma para a consulta de notas e médias finais dos alunos do Colégio Técnico Industrial (UNESP). No entanto, sua arquitetura é uma **aplicação monolítica** que **não disponibiliza** uma Interface de Programação de Aplicações (API) pública.
+O NSAC Online é a **única** plataforma para a consulta de notas e médias finais dos alunos do Colégio Técnico Industrial (UNESP). No entanto, sua arquitetura é uma **aplicação monolítica** (provavelmente em PHP/Laravel) que **não disponibiliza** uma Interface de Programação de Aplicações (API) pública. Todas as interações resultam no retorno de páginas em **HTML puro**.
 
-Nossa API atua como uma **camada de abstração** vital, transformando a complexidade de interagir com o HTML do NSAC em _endpoints_ limpos e fáceis de usar (JSON).
+Nossa API atua como uma **camada de abstração** vital, transformando a complexidade de interagir com o HTML do NSAC em _endpoints_ limpos e fáceis de usar. Isso permite que qualquer aplicação externa — seja um bot no Discord, um serviço de notificação no WhatsApp ou um aplicativo móvel — possa consumir esses dados de forma moderna e eficiente, utilizando o formato **JSON**.
+
+## Antes de tudo, o que é _Web Scraping_? 🕵️
+Para viabilizar essa abstração, o projeto emprega a técnica de **Web Scraping** (ou Raspagem de Dados).
+
+Scraping é uma técnica utilizada para **coletar informações estruturadas** de sites que não fornecem um canal de acesso direto (como uma API nativa exposta publicamente).
+
+#### Como Funciona:
+
+1.  **Simulação:** Em vez de o usuário acessar o site manualmente, nossa API simula a interação de um navegador real.
+2.  **Captura:** O usuário envia seu login e senha para nossa API. Nós autenticamos no NSAC, capturamos os cookies de sessão e geramos um **APIToken** exclusivo para o usuário.
+3.  **Extração:** Quando você solicita suas notas, a API usa esse token para acessar as páginas internas do NSAC, baixar o HTML e "ler" os dados relevantes (notas, faltas, matérias).
+4.  **Transformação:** Os dados extraídos são limpos e convertidos de tabelas HTML complexas para um formato **JSON** estruturado.
+5.  **Entrega:** A API entrega esse JSON pronto para uso ao desenvolvedor.
+6.  **Sua vez**: Você apresenta esses dados para o usuário final na plataforma que preferir.
+
+## Tecnologias utilizadas:
+
+![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js) <br>
+O [NodeJS](https://nodejs.org/en) é o ambiente de execução assíncrono que hospeda a API. Escolhemos a versão **18+** para aproveitar melhorias de performance e recursos recentes.
+
+![TypeScript 5.x](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)<br>
+O [TypeScript](https://www.typescriptlang.org/) garante tipagem estática, resultando em um código mais robusto e seguro, essencial para a manipulação precisa dos dados extraídos.
+
+![Express.js 4.x](https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express)<br>
+O [Express.js](https://expressjs.com/) estrutura a **API RESTful**, gerenciando rotas, middlewares e as respostas HTTP/JSON.
+
+![Cheerio](https://img.shields.io/badge/Cheerio-:D-orange?style=for-the-badge&logo=cheerio)<br>
+O [Cheerio](https://cheerio.js.org/) é a "alma" do _Scraping_. Ele analisa o HTML retornado pelo NSAC com uma sintaxe similar ao jQuery, permitindo localizar e extrair notas e médias rapidamente.
+
+![SQLite 3](https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite)<br>
+O [SQLite3](https://sqlite.org/) é utilizado para armazenar usuários, contas vinculadas e tokens de sessão de forma leve e local, sem necessidade de configurar um servidor de banco de dados complexo.
 
 # ⚙️ Como Começar
-
 ## Pré-requisitos
 1. NodeJS 18 ou superior.
 2. NPM ou outro gerenciador de pacotes (yarn, pnpm).
+3. Um cérebro funcional.
 
 ## **Instalação**
 1.  **Clone o repositório:**
@@ -34,17 +65,24 @@ Nossa API atua como uma **camada de abstração** vital, transformando a complex
     ```bash
     npm install
     ```
-3.  **Configure as variáveis de ambiente:** Crie um arquivo chamado `.env` na raiz do projeto contendo:
+3.  **Configure as variáveis de ambiente:** Crie um arquivo chamado `.env` na raiz do projeto e adicione:
+    
     ```bash
+    # Porta em que o servidor irá rodar
     PORT="3000"
+    
+    # Chave para assinar os tokens JWT (Login na API)
     SECRETKEY="sua_chave_jwt_super_secreta"
+
+    # Chave para criptografar os cookies do NSAC no banco de dados (AES-256)
     ENCRYPTIONKEY="chave_hexadecimal_com_32_bytes" 
-    # Dica: Gere a chave HEX com: openssl rand -hex 32
+    # Dica: Gere uma chave válida com: openssl rand -hex 32
     ```
-4. **Execute o servidor:**
+ 4. **Execute o servidor em modo de desenvolvimento:** O servidor irá reiniciar automaticamente a cada alteração no código.
     ```bash
     npm run dev 
     ``` 
+  O servidor estará rodando em `http://localhost:3000`.
 
 # 📚 Documentação da API
 
