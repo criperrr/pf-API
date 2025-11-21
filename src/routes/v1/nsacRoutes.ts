@@ -4,10 +4,11 @@ import { checkJwtAuth } from "../../middlewares/checkJwtAuth.js";
 import { checkApiKeyAuth } from "../../middlewares/checkNsacToken.js";
 const router = Router();
 
+router.get("/accounts/token-status", nsacController.checkApiKeyAuth);
+
 router.use("/accounts", checkJwtAuth);
 router.use("/grades", checkApiKeyAuth);
 
-router.get("/accounts/token-status", nsacController.checkApiKeyAuth);
 router.post("/accounts", nsacController.createToken);
 router.get("/accounts", nsacController.getTokens);
 router.delete("/accounts", nsacController.deleteTokens);
