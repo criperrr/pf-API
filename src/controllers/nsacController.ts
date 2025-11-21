@@ -214,7 +214,9 @@ export async function getClassGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { apiToken, ano }: queryPayload = req.query;
+    const apiToken = req.headers["x-api-token"] as string;
+
+    const { ano }: queryPayload = req.query;
     if (!apiToken || !ano) {
         return res.status(400).json({ error: "Faltando parametros na URL" });
     }
@@ -252,7 +254,9 @@ export async function getPrivateGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { apiToken, ano }: queryPayload = req.query;
+    const apiToken = req.headers["x-api-token"] as string;
+
+    const { ano }: queryPayload = req.query;
     if (!apiToken || !ano) {
         return res.status(400).json({ error: "Faltando parametros na URL" });
     }
