@@ -185,7 +185,6 @@ Remove o vínculo de uma conta e invalida o token.
 Endpoints para realizar o scraping das notas.
 
 ### ⚠️ Regras de Autenticação dos Endpoints
-Devido à estrutura atual, os requisitos variam por rota:
 1. O Header `x-api-token` é **obrigatório** em todas as rotas abaixo (verificação de segurança).
 
 #### 4. Consultar Boletim Completo
@@ -218,11 +217,10 @@ Retorna o panorama completo: notas da turma, notas do usuário e hashes de integ
 Retorna apenas a lista de matérias e as notas gerais da sala.
 
 - **Headers Obrigatórios:**
-    - `x-api-token`: `<SEU_APITOKEN>` (Para autenticação)
+    - `x-api-token`: `<SEU_APITOKEN>`
 - **Query Params:**
     - `ano`: Número do ano letivo.
-    - `apiToken`: `<SEU_APITOKEN>` (Para execução interna)
-- **Exemplo de URL:** `/api/nsac/grades/class?ano=3&apiToken=SEU_TOKEN_AQUI`
+- **Exemplo de URL:** `/api/nsac/grades/class?ano=3`
 - **Resposta (200 OK):**
   ```jsonc
   {
@@ -241,11 +239,10 @@ Retorna apenas a lista de matérias e as notas gerais da sala.
 Retorna apenas as notas do aluno dono do token.
 
 - **Headers Obrigatórios:**
-    - `x-api-token`: `<SEU_APITOKEN>` (Para autenticação)
+    - `x-api-token`: `<SEU_APITOKEN>`
 - **Query Params:**
     - `ano`: Número do ano letivo.
-    - `apiToken`: `<SEU_APITOKEN>` (Para execução interna)
-- **Exemplo de URL:** `/api/nsac/grades/private?ano=3&apiToken=SEU_TOKEN_AQUI`
+- **Exemplo de URL:** `/api/nsac/grades/private?ano=3`
 - **Resposta (200 OK):**
   ```jsonc
   {
