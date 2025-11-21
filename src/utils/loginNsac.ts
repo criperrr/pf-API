@@ -54,8 +54,8 @@ export async function getTokens(): Promise<Tokens> {
 export async function login(
     email: string,
     password: string
-): Promise<string | false> {
-    // Retorna a string que o NSAC aceita para autenticar direto (Cookie de sessão do PHP) OU falso caso o NSAC recuse o login
+): Promise<string> {
+    // Retorna a string que o NSAC aceita para autenticar direto (Cookie de sessão do PHP) OU lança uma exceção no final.
     const cookies = await getTokens();
 
     let xsrf = cookies.xsrf;
@@ -97,5 +97,5 @@ export async function login(
 
     if (responseLogin.status == 302 && responseTest.status == 200) {
         return newCookiesString;
-    } else return false;
+    } else throw new Error("Wrong NSAC email or password");
 }

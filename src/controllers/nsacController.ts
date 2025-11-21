@@ -1,19 +1,12 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+
 import verifyEmptyFields from "../utils/emptyFields.js";
-import { encrypt, generateRandomString } from "../utils/crypto.js";
+import { encrypt, generateRandomString, decrypt } from "../utils/crypto.js";
 import db, { getSql, runSql, queryOne } from "../utils/database.js";
 import { ApiToken } from "../models/ApiToken.js";
-import jwt from "jsonwebtoken";
-const secretKey: any = process.env.SECRETKEY;
+import { login } from "../utils/loginNsac.js";
 import { getGrades } from "../utils/getGrades.js";
-import { decrypt } from "../utils/crypto.js";
-// router.post("/accounts", checkJwtAuth, nsacController.createToken);
-// router.get("/accounts", checkJwtAuth, nsacController.getTokens);
-// router.delete("/accounts", checkJwtAuth, nsacController.deleteTokens);
-
-// router.get("/grades/class", nsacController.getClassGrades);
-// router.get("/grades/private", nsacController.getPrivateGrades);
-// router.get("/grades", nsacController.getAllGrades);
 
 interface nsacAccountRequest {
     email: string;
@@ -27,13 +20,18 @@ interface ApiResponse {
         message?: string;
         userId?: string;
         nsacAccountId?: number;
-        APIToken?: string;
+        apiToken?: string;
     };
 }
 
 interface jwtTokenPayload {
     id_User: string;
     email: string;
+}
+
+interface queryPayload {
+    apiToken?: string;
+    ano?: number;
 }
 
 export async function createToken(req: Request, res: Response) {
@@ -60,21 +58,10 @@ export async function createToken(req: Request, res: Response) {
     }
 
     try {
-        // const loginNsac = await login(email, password);
-
-        // if (!loginNsac) {
-        //     response = {
-        //         errors: [
-        //             {
-        //                 error: "Invalid NSAC email or password",
-        //             },
-        //         ],
-        //     };
-        //     return res.status(401).json(response);
-        // }
+        const loginNsac = await login(email, password);
 
         const encryptedPassword = encrypt(password);
-        const encryptedCookie = encrypt("loginNsac");
+        const encryptedCookie = encrypt(loginNsac);
         const apiToken = generateRandomString(32).toUpperCase();
 
         const nsacAccountId = await runSql(
@@ -86,7 +73,7 @@ export async function createToken(req: Request, res: Response) {
         if (!nsacAccountId) throw new Error("Failed to insert NsacAccount");
 
         const apiTokenId = await runSql(
-            "INSERT INTO ApiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?)",
+            "INSERT INTO apiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?)",
             [
                 userId.toString(),
                 nsacAccountId.toString(),
@@ -96,12 +83,12 @@ export async function createToken(req: Request, res: Response) {
             db
         );
 
-        if (!apiTokenId) throw new Error("Failed to insert ApiToken");
+        if (!apiTokenId) throw new Error("Failed to insert apiToken");
 
         response.data = {
             userId: userId,
             nsacAccountId: nsacAccountId,
-            APIToken: apiToken,
+            apiToken: apiToken,
         };
         response.errors = [];
 
@@ -111,6 +98,12 @@ export async function createToken(req: Request, res: Response) {
             response.errors = [
                 {
                     error: "Already registered email.",
+                },
+            ];
+        } else if (err.message.includes("Wrong NSAC email or password")) {
+            response.errors = [
+                {
+                    error: "Wrong NSAC email or password",
                 },
             ];
         } else {
@@ -145,7 +138,7 @@ export async function getTokens(req: Request, res: Response) {
 
     try {
         const apiTokenIds = await getSql(
-            "SELECT token, id_NsacAccount FROM ApiToken WHERE id_User = ?",
+            "SELECT token, id_NsacAccount FROM apiToken WHERE id_User = ?",
             [userId],
             db
         );
@@ -154,6 +147,7 @@ export async function getTokens(req: Request, res: Response) {
         response.data = {
             ...apiTokenIds,
         };
+
         res.status(200).json({ apiTokenIds });
     } catch (err) {
         response.errors = [
@@ -184,7 +178,7 @@ export async function deleteTokens(req: Request, res: Response) {
 
     try {
         const resultQuery = await runSql(
-            "DELETE FROM ApiToken WHERE token = ? ",
+            "DELETE FROM apiToken WHERE token = ? ",
             [token],
             db
         );
@@ -220,23 +214,20 @@ export async function getClassGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.query as {
-        APIToken: string;
-        ano: string;
-    };
-    if (!APIToken || !ano) {
+    const { apiToken, ano }: queryPayload = req.query;
+    if (!apiToken || !ano) {
         return res.status(400).json({ error: "Faltando parametros na URL" });
     }
     const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
-            "SELECT cookieString FROM ApiToken WHERE token = ?",
-            [APIToken],
+            "SELECT cookieString FROM apiToken WHERE token = ?",
+            [apiToken],
             db
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
         if (!grades) throw new Error();
 
         response.data = {
@@ -261,23 +252,20 @@ export async function getPrivateGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.query as {
-        APIToken: string;
-        ano: string;
-    };
-    if (!APIToken || !ano) {
+    const { apiToken, ano }: queryPayload = req.query;
+    if (!apiToken || !ano) {
         return res.status(400).json({ error: "Faltando parametros na URL" });
     }
     const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
-            "SELECT cookieString FROM ApiToken WHERE token = ?",
-            [APIToken],
+            "SELECT cookieString FROM apiToken WHERE token = ?",
+            [apiToken],
             db
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
         if (!grades) throw new Error();
 
         response.data = {
@@ -305,23 +293,24 @@ export async function getAllGrades(req: Request, res: Response) {
         errors: [{}],
         data: {},
     };
-    const { APIToken, ano } = req.query as {
-        APIToken: string;
-        ano: string;
-    };
-    if (!APIToken || !ano) {
+
+    const apiToken = req.headers["x-api-token"] as string;
+
+    const { ano }: queryPayload = req.query;
+
+    if (!ano) {
         return res.status(400).json({ error: "Faltando parametros na URL" });
     }
     const anoNumero = Number(ano);
     try {
         const { cookieString } = await queryOne<ApiToken>(
-            "SELECT cookieString FROM ApiToken WHERE token = ?",
-            [APIToken],
+            "SELECT cookieString FROM apiToken WHERE token = ?",
+            [apiToken],
             db
         );
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, APIToken);
+        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
         if (!grades) throw new Error();
 
         response.data = {
@@ -329,14 +318,23 @@ export async function getAllGrades(req: Request, res: Response) {
         };
 
         res.status(200).json(response);
-    } catch (err) {
-        console.log(err);
+    } catch (err: any) {
+        if (err.message.includes("Invalid year URL parameter.")) {
+            response.errors = [
+                {
+                    error: err.message,
+                },
+            ];
+            console.log(err);
+            return res.status(400).json(response);
+        } else {
+            response.errors = [
+                {
+                    error: "Internal server error",
+                },
+            ];
+        }
 
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
         console.log(err);
         return res.status(500).json(response);
     }

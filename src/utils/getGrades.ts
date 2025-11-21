@@ -34,6 +34,7 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
     const $ = cheerio.load(boletimHtml);
     const userCurrentYear = $("table").length; // quantidade de tabelas = ano atual (3 tabelas = 3 anos)
     const anoIndex = userCurrentYear - ano;
+    if(ano > userCurrentYear) throw new Error(`Invalid year URL parameter. User current in year ${userCurrentYear}`)
 
     const topTable = $("table")[anoIndex] ?? $("table")[0];
     const tBody = $(topTable).find("tbody tr");
@@ -54,7 +55,7 @@ export async function getGrades(logToken: string, ano: number, APIToken?: string
         .map((value) => value.trim().replace(/[A-Za-z* ]+/g, "-"));
 
     let badGrades: Array<string> = [];
-    let userArray: Array<Array<string>> = [];
+    let userArray: Array<Array<string>> = [[]];
 
     $(tBody)
         .find("td")

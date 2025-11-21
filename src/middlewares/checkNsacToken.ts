@@ -6,7 +6,10 @@ export async function checkApiKeyAuth(
     res: Response,
     next: NextFunction
 ) {
-    const { APIToken } = req.body;
+    const APIToken = req.headers["x-api-token"] as string;
+
+    if (!APIToken)
+        return res.status(401).json({ error: "No API Token provided." });
 
     try {
         const apiTokenId = await runSql(

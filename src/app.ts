@@ -6,10 +6,12 @@ import { ensureDbCreated } from "./utils/database.js";
 })();
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
+import cors from "cors";
 
 const app: Express = e();
 
 app.use(e.json());
+app.use(cors());
 app.use(e.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 3000;
