@@ -1,12 +1,13 @@
 import { NsacAccount } from "../models/nsacAccount.js";
-import { encrypt } from "./crypto.js";
+import { AppError } from "../types/ApiError.js";
+import { decrypt, encrypt } from "./crypto.js";
 import db, { queryOne, runSql } from "./database.js";
 import { login } from "./loginNsac.js";
 
 export async function verifyCookie(
     token: string,
     APIToken?: string
-): Promise<false | string> {
+): Promise<string> {
     const responseTest = await fetch("http://200.145.153.1/nsac/home", {
         credentials: "include",
         headers: {
@@ -20,7 +21,7 @@ export async function verifyCookie(
     else {
         if (APIToken) {
             try {
-                const { email, password } = await queryOne<NsacAccount>(
+                const accountData = await queryOne<NsacAccount>(
                     `SELECT
                         NA.email,
                         NA.password
@@ -33,19 +34,39 @@ export async function verifyCookie(
                     [APIToken],
                     db
                 );
-                const newCookie = (await login(email, password)) as string;
-                const encryptedCookie = encrypt(newCookie);
+                if (!accountData) throw new Error("Token not found");
+
+                const decryptedPassword = decrypt(accountData.password);
+
+                const newCookie = (await login(
+                    accountData.email,
+                    decryptedPassword
+                )) as string;
+
+                const encryptedNewCookie = encrypt(newCookie);
 
                 await runSql(
-                    "INSERT INTO ApiToken(token) VALUES (?)",
-                    [encryptedCookie],
+                    "UPDATE ApiToken SET cookieString = ? WHERE token = ?",
+                    [encryptedNewCookie, APIToken],
                     db
                 );
-                return encryptedCookie;
+
+                return newCookie;
             } catch (err) {
-                return false; // retorna falso ao inves de lançar exceção em tudo
+                console.error("Erro ao renovar cookie:");
+                console.log(err);
+                
+                throw new AppError(
+                    "Failed to refresh session",
+                    500,
+                    "SESSION_REFRESH_ERROR"
+                );
             }
         }
-        return false; // n lança exceção
+        throw new AppError(
+            "Invalid cookie and no APIToken provided",
+            401,
+            "NSAC_AUTH_EXPIRED"
+        );
     }
 }

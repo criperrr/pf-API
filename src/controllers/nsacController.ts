@@ -13,24 +13,20 @@ import {
     NsacApiResponse,
     NsacToken,
     NsacTokensResponse,
+    DeleteTokenRequest,
+    DeleteTokenResponse,
+    GradesQuery,
+    ClassGradesData,
+    PrivateGradesData,
+    FullGradesData,
+    GradeItem,
 } from "../types/index.js";
-import { failure, singleError, success } from "../utils/responseHelpers.js";
+import { success } from "../utils/responseHelpers.js";
 import { AppError, MultiAppErrors } from "../types/ApiError.js";
 
-interface nsacAccountRequest {
-    email: string;
-    userId: string;
-    password: string;
-}
-
-interface jwtTokenPayload {
+interface JwtTokenPayload {
     id_User: string;
     email: string;
-}
-
-interface queryPayload {
-    apiToken?: string;
-    ano?: number;
 }
 
 export async function createToken(
@@ -40,21 +36,40 @@ export async function createToken(
 ) {
     try {
         const { email, password } = req.body;
-        const jwtToken = req.headers.authorization?.split(" ")[1] as string;
 
-        const payload = jwt.decode(jwtToken) as jwtTokenPayload; // n pode ser null porque passa pelo middlware que valida ele.
+        // acho que é impossível chegar aq mas pro typescript n encher o saco é isso ai
+        if (!req.headers.authorization) {
+            throw new AppError(
+                "No Authorization header",
+                401,
+                "AUTH_HEADER_MISSING"
+            );
+        }
 
-        if (!payload || !payload.id_User)
+        const jwtToken = req.headers.authorization.split(" ")[1];
+
+        if (!jwtToken) {
+            throw new AppError(
+                "Invalid JWT token format.",
+                401,
+                "AUTH_INVALID_PAYLOAD"
+            );
+        }
+
+        const payload = jwt.decode(jwtToken) as JwtTokenPayload;
+
+        if (!payload || !payload.id_User) {
             throw new AppError(
                 "Invalid JWT token",
                 401,
                 "AUTH_MISSING_PAYLOAD"
             );
+        }
 
         const userId = payload.id_User;
 
         const emptyFields = verifyEmptyFields({ email, password, userId });
-        if (emptyFields.length != 0) {
+        if (emptyFields.length !== 0) {
             const errors = emptyFields.map((field) => ({
                 field: field,
                 message: `Empty field ${field}`,
@@ -62,7 +77,7 @@ export async function createToken(
             }));
             throw new MultiAppErrors(errors);
         }
-        // Valida se as credenciais funcionam no sistema NSAC
+
         const loginNsac = await login(email, password);
 
         const encryptedPassword = encrypt(password);
@@ -89,7 +104,13 @@ export async function createToken(
             console.log("Novo email registrado.");
         }
 
-        if (!nsacAccountId) throw new Error("Failed to resolve nsacAccountId while creating token.");
+        if (!nsacAccountId) {
+            throw new AppError(
+                "Failed to resolve nsacAccountId while creating token.",
+                500,
+                "SERVER_DB_ERROR"
+            );
+        }
 
         await runSql(
             "DELETE FROM apiToken WHERE id_User = ? AND id_NsacAccount = ?",
@@ -103,9 +124,16 @@ export async function createToken(
             db
         );
 
-        if (!apiTokenId) throw new Error("Failed to insert apiToken while creating token.");
+        if (!apiTokenId) {
+            throw new AppError(
+                "Failed to insert apiToken while creating token.",
+                500,
+                "SERVER_DB_ERROR"
+            );
+        }
 
-        const data = {
+        const data: NsacApiResponse = {
+            message: "Token created successfully",
             userId: userId,
             nsacAccountId: nsacAccountId,
             apiToken: apiToken,
@@ -119,116 +147,148 @@ export async function createToken(
 
 export async function getTokens(
     req: Request<{}, ApiResponse<NsacTokensResponse>>,
-    res: Response
+    res: Response,
+    next: NextFunction
 ) {
-    const jwtToken = req.headers.authorization?.split(" ")[1] as string;
-    const payload = jwt.decode(jwtToken) as jwtTokenPayload;
-    const userId = payload.id_User;
-
     try {
-        const apiTokenIds = await getSql<NsacToken>(
+        if (!req.headers.authorization) {
+            throw new AppError(
+                "No Authorization header",
+                401,
+                "AUTH_HEADER_MISSING"
+            );
+        }
+
+        const jwtToken = req.headers.authorization.split(" ")[1] as string;
+        const payload = jwt.decode(jwtToken) as unknown as JwtTokenPayload;
+
+        if (!payload || !payload.id_User) {
+            throw new AppError(
+                "Invalid JWT payload",
+                401,
+                "AUTH_INVALID_TOKEN"
+            );
+        }
+
+        const userId = payload.id_User;
+
+        const apiTokens = await getSql<NsacToken>(
             "SELECT token, id_NsacAccount FROM apiToken WHERE id_User = ?",
             [userId],
             db
         );
-
-        const data: NsacTokensResponse = {
-            ...apiTokenIds,
-        };
+        
+        const data: NsacTokensResponse = apiTokens
 
         res.status(200).json(success(data));
     } catch (err) {
-        console.log(err);
-        return res
-            .status(500)
-            .json(singleError("Internal server errror", "API_SERVER_ERROR"));
+        next(err);
     }
 }
 
-export async function checkApiKeyAuth(req: Request, res: Response) {
+// Middleware-like function
+export async function checkApiKeyAuth(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
     const APIToken = req.headers["x-api-token"] as string;
 
-    if (!APIToken)
-        return res
-            .status(401)
-            .json(singleError("No API Token provided", "AUTH_NO_API_TOKEN"));
-
     try {
-        const apiTokenId = await runSql(
-            "SELECT * FROM ApiToken WHERE token = ?",
+        if (!APIToken) {
+            throw new AppError(
+                "No API Token provided",
+                401,
+                "AUTH_NO_API_TOKEN"
+            );
+        }
+
+        const tokenExists = await queryOne(
+            "SELECT 1 FROM ApiToken WHERE token = ?",
             [APIToken],
             db
         );
-        console.log(apiTokenId);
-        if (apiTokenId > 0) {
-            return res.status(200).json({ data: { message: "Valid token!" } });
+
+        if (tokenExists) {
+            return res.status(200).send();
         } else {
-            return res.status(401).json({ error: "Invalid API Token." });
+            throw new AppError("Invalid token", 401, "INVALID_API_TOKEN");
         }
     } catch (err: any) {
-        console.log(err);
-        return res.status(500).json({ error: "Internal server error" });
+        next(err);
     }
 }
 
-export async function deleteTokens(req: Request, res: Response) {
-    let response: ApiResponse = {
-        errors: [],
-        data: {},
-    };
-
+export async function deleteTokens(
+    req: Request<{}, ApiResponse<DeleteTokenResponse>, DeleteTokenRequest>,
+    res: Response,
+    next: NextFunction
+) {
     const { token } = req.body;
 
-    console.log({
-        token,
-    });
-
     try {
+        if (!token) {
+            throw new AppError(
+                "Token is required",
+                400,
+                "MISSING_FIELD",
+                "token"
+            );
+        }
+
         const resultQuery = await runSql(
             "DELETE FROM apiToken WHERE token = ? ",
             [token],
             db
         );
-        console.log(resultQuery);
 
         if (resultQuery > 0) {
-            response.data = {
-                message:
-                    "Success! Token unliked from your account and deleted from DB.",
-            };
-            return res.status(200).json(response);
+            return res.status(200).json(
+                success({
+                    message:
+                        "Success! Token unlinked from your account and deleted from DB.",
+                })
+            );
         } else {
-            response.errors = [
-                {
-                    error: "Nothing was changed (wrong API Key?)",
-                },
-            ];
-            return res.status(404).json(response);
+            throw new AppError(
+                "Nothing was changed (wrong API Key?)",
+                404,
+                "TOKEN_NOT_FOUND"
+            );
         }
     } catch (err) {
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
-        console.log(err);
-        return res.status(500).json(response);
+        next(err);
     }
 }
 
-export async function getClassGrades(req: Request, res: Response) {
-    let response = {
-        errors: [{}],
-        data: {},
-    };
+export async function getClassGrades(
+    req: Request<{}, ApiResponse<ClassGradesData>, {}, GradesQuery>,
+    res: Response,
+    next: NextFunction
+) {
     const apiToken = req.headers["x-api-token"] as string;
+    const { year } = req.query;
 
-    const { ano }: queryPayload = req.query;
-    if (!apiToken || !ano) {
-        return res.status(400).json({ error: "Faltando parametros na URL" });
-    }
-    const anoNumero = Number(ano);
     try {
+        if (!apiToken)
+            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
+        if (!year)
+            throw new AppError(
+                "Missing 'year' parameter",
+                400,
+                "MISSING_PARAM",
+                "year"
+            );
+
+        const yearNumber = Number(year);
+        if (isNaN(yearNumber))
+            throw new AppError(
+                "Invalid 'year' parameter",
+                400,
+                "INVALID_PARAM",
+                "year"
+            );
+
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
@@ -236,46 +296,68 @@ export async function getClassGrades(req: Request, res: Response) {
         );
 
         if (!tokenData) {
-            return res
-                .status(401)
-                .json({ error: "Token inválido ou não encontrado." });
+            throw new AppError(
+                "Token inválido ou não encontrado.",
+                401,
+                "INVALID_API_TOKEN"
+            );
         }
+
         const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
-        if (!grades) throw new Error();
+        const grades = await getGrades(decryptedCookies, yearNumber, apiToken);
 
-        response.data = {
+        if (!grades) {
+            throw new AppError(
+                "Failed to retrieve grades from source",
+                502,
+                "UPSTREAM_ERROR"
+            );
+        }
+
+        const data: ClassGradesData = {
             generalHashes: grades.generalHashes,
-            generalGrades: grades.generalGrades,
+            generalGrades: grades.generalGrades as GradeItem[],
         };
 
-        res.status(200).json(response);
-    } catch (err) {
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
-        console.log(err);
-        return res.status(500).json(response);
+        res.status(200).json(success(data));
+    } catch (err: any) {
+        if (err.message && err.message.includes("Invalid year URL parameter")) {
+            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
+        }
+        next(err);
     }
 }
 
-export async function getPrivateGrades(req: Request, res: Response) {
-    let response = {
-        errors: [{}],
-        data: {},
-    };
+export async function getPrivateGrades(
+    req: Request<{}, ApiResponse<PrivateGradesData>, {}, GradesQuery>,
+    res: Response,
+    next: NextFunction
+) {
     const apiToken = req.headers["x-api-token"] as string;
+    const { year } = req.query;
 
-    const { ano }: queryPayload = req.query;
-    if (!apiToken || !ano) {
-        return res.status(400).json({ error: "Faltando parametros na URL" });
-    }
-    const anoNumero = Number(ano);
     try {
+        if (!apiToken)
+            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
+        if (!year)
+            throw new AppError(
+                "Missing 'year' parameter",
+                400,
+                "MISSING_PARAM",
+                "year"
+            );
+
+        const yearNumero = Number(year);
+        if (isNaN(yearNumero))
+            throw new AppError(
+                "Invalid 'year' parameter",
+                400,
+                "INVALID_PARAM",
+                "year"
+            );
+
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
@@ -283,51 +365,69 @@ export async function getPrivateGrades(req: Request, res: Response) {
         );
 
         if (!tokenData) {
-            return res
-                .status(401)
-                .json({ error: "Token inválido ou não encontrado." });
+            throw new AppError(
+                "Token inválido ou não encontrado.",
+                401,
+                "INVALID_API_TOKEN"
+            );
         }
+
         const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
-        if (!grades) throw new Error();
+        const grades = await getGrades(decryptedCookies, yearNumero, apiToken);
 
-        response.data = {
+        if (!grades) {
+            throw new AppError(
+                "Failed to retrieve grades from source",
+                502,
+                "UPSTREAM_ERROR"
+            );
+        }
+
+        const data: PrivateGradesData = {
             userCurrentYear: grades.userCurrentYear,
             userHashes: grades.userHashes,
-            userGrades: grades.userGrades,
+            userGrades: grades.userGrades as GradeItem[],
         };
 
-        res.status(200).json(response);
-    } catch (err) {
-        console.log(err);
-
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
-        console.log(err);
-        return res.status(500).json(response);
+        res.status(200).json(success(data));
+    } catch (err: any) {
+        if (err.message && err.message.includes("Invalid year URL parameter")) {
+            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
+        }
+        next(err);
     }
 }
 
-export async function getAllGrades(req: Request, res: Response) {
-    let response = {
-        errors: [{}],
-        data: {},
-    };
-
+export async function getAllGrades(
+    req: Request<{}, ApiResponse<FullGradesData>, {}, GradesQuery>,
+    res: Response,
+    next: NextFunction
+) {
     const apiToken = req.headers["x-api-token"] as string;
+    const { year } = req.query;
 
-    const { ano }: queryPayload = req.query;
-
-    if (!ano) {
-        return res.status(400).json({ error: "Faltando parametros na URL" });
-    }
-    const anoNumero = Number(ano);
     try {
+        if (!apiToken)
+            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
+        if (!year)
+            throw new AppError(
+                "Missing 'year' parameter",
+                400,
+                "MISSING_PARAM",
+                "year"
+            );
+
+        const yearNumero = Number(year);
+        if (isNaN(yearNumero))
+            throw new AppError(
+                "Invalid 'year' parameter",
+                400,
+                "INVALID_PARAM",
+                "year"
+            );
+
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
@@ -335,40 +435,39 @@ export async function getAllGrades(req: Request, res: Response) {
         );
 
         if (!tokenData) {
-            return res
-                .status(401)
-                .json({ error: "Token inválido ou não encontrado." });
+            throw new AppError(
+                "Token inválido ou não encontrado.",
+                401,
+                "INVALID_API_TOKEN"
+            );
         }
-        const { cookieString } = tokenData;
 
+        const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, anoNumero, apiToken);
-        if (!grades) throw new Error();
+        const grades = await getGrades(decryptedCookies, yearNumero, apiToken);
 
-        response.data = {
-            ...grades,
-        };
-
-        res.status(200).json(response);
-    } catch (err: any) {
-        if (err.message.includes("Invalid year URL parameter.")) {
-            response.errors = [
-                {
-                    error: err.message,
-                },
-            ];
-            console.log(err);
-            return res.status(400).json(response);
-        } else {
-            response.errors = [
-                {
-                    error: "Internal server error",
-                },
-            ];
+        if (!grades) {
+            throw new AppError(
+                "Failed to retrieve grades from source",
+                502,
+                "UPSTREAM_ERROR"
+            );
         }
 
-        console.log(err);
-        return res.status(500).json(response);
+        // Assume que 'grades' retorna o objeto completo
+        const data = {
+            ...grades,
+        } as FullGradesData;
+
+        res.status(200).json(success(data));
+    } catch (err: any) {
+        if (
+            err.message &&
+            err.message.includes("Invalid year URL parameter.")
+        ) {
+            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
+        }
+        next(err);
     }
 }

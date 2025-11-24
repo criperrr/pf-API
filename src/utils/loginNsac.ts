@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { AppError } from "../types/ApiError.js";
 
 interface Tokens {
     xsrf: string;
@@ -51,10 +52,7 @@ export async function getTokens(): Promise<Tokens> {
     };
 }
 
-export async function login(
-    email: string,
-    password: string
-): Promise<string> {
+export async function login(email: string, password: string): Promise<string> {
     // Retorna a string que o NSAC aceita para autenticar direto (Cookie de sessão do PHP) OU lança uma exceção no final.
     const cookies = await getTokens();
 
@@ -97,5 +95,10 @@ export async function login(
 
     if (responseLogin.status == 302 && responseTest.status == 200) {
         return newCookiesString;
-    } else throw new Error("Wrong NSAC email or password");
+    } else
+        throw new AppError(
+            "Wrong NSAC email or password",
+            401,
+            "INVALID_NSAC_CREDENTIALS"
+        );
 }

@@ -19,6 +19,10 @@ interface ApiFailure {
 
 export type ApiResponse<T = any> = ApiSucess<T> | ApiFailure;
 
+export interface DeleteTokenResponse {
+    message: string;
+}
+
 // * Data response
 export interface RegisterDataResponse {
     message: string;
@@ -52,4 +56,35 @@ export interface BasicNsacApiRequest {
     email: string;
     userId: string;
     password: string;
+}
+
+export interface DeleteTokenRequest {
+    token: string;
+}
+
+// * Request Queries (Query Params)
+export interface GradesQuery {
+    year?: string;
+}
+
+
+// Interfaces para os dados de notas (baseado no que vi no seu código)
+export interface GradeItem {
+    name: string;
+    grades: string[];
+}
+
+export interface ClassGradesData {
+    generalHashes: string[];
+    generalGrades: GradeItem[];
+}
+
+export interface PrivateGradesData {
+    userCurrentYear: number;
+    userHashes: string[];
+    userGrades: GradeItem[];
+}
+
+export interface FullGradesData extends ClassGradesData, PrivateGradesData {
+    gradesLenght?: number;
 }

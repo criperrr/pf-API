@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import hash from "object-hash";
 import { verifyCookie } from "./verifyCookie.js";
+import { AppError } from "../types/ApiError.js";
 
 function chunkArray(array: Array<any>, size: number) {
     const result = [];
@@ -17,12 +18,7 @@ export async function getGrades(
 ) {
     const testTokenResult = await verifyCookie(logToken, APIToken);
 
-    if (testTokenResult == false) {
-        return false;
-    } else {
-        logToken = testTokenResult;
-    }
-
+    logToken = testTokenResult;
     const response = await fetch("http://200.145.153.1/nsac/aluno/boletim", {
         credentials: "include",
         headers: {
