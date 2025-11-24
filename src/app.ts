@@ -7,9 +7,11 @@ import { ensureDbCreated } from "./utils/database.js";
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
 import cors from "cors";
+import { globalErrorHandling } from "./utils/errorHandler.js";
 
 const app: Express = e();
 
+app.use(globalErrorHandling);
 app.use(e.json());
 app.use(cors());
 app.use(e.urlencoded({ extended: true }));

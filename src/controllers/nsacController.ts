@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
 import verifyEmptyFields from "../utils/emptyFields.js";
@@ -7,21 +7,20 @@ import db, { getSql, runSql, queryOne, insertSql } from "../utils/database.js";
 import { ApiToken } from "../models/ApiToken.js";
 import { login } from "../utils/loginNsac.js";
 import { getGrades } from "../utils/getGrades.js";
+import {
+    ApiResponse,
+    BasicNsacApiRequest,
+    NsacApiResponse,
+    NsacToken,
+    NsacTokensResponse,
+} from "../types/index.js";
+import { failure, singleError, success } from "../utils/responseHelpers.js";
+import { AppError, MultiAppErrors } from "../types/ApiError.js";
 
 interface nsacAccountRequest {
     email: string;
     userId: string;
     password: string;
-}
-
-interface ApiResponse {
-    errors?: Array<Object>;
-    data?: {
-        message?: string;
-        userId?: string;
-        nsacAccountId?: number;
-        apiToken?: string;
-    };
 }
 
 interface jwtTokenPayload {
@@ -34,38 +33,36 @@ interface queryPayload {
     ano?: number;
 }
 
-export async function createToken(req: Request, res: Response) {
-    if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-    }
-    let response: ApiResponse = {
-        errors: [],
-        data: {},
-    };
-
-    const { email, password } = req.body as nsacAccountRequest;
-    const jwtToken = req.headers.authorization?.split(" ")[1] as string;
-
-    const payload = jwt.decode(jwtToken) as jwtTokenPayload;
-
-    if (!payload || !payload.id_User) {
-        return res
-            .status(401)
-            .json({ errors: [{ error: "Invalid JWT Token" }] });
-    }
-    const userId = payload.id_User;
-
-    const emptyFields = verifyEmptyFields({ email, password, userId });
-    if (emptyFields.length != 0) {
-        response.errors = emptyFields.map((field) => ({
-            field: field,
-            error: `Empty field ${field}`,
-        }));
-        return res.status(400).json(response);
-    }
-
+export async function createToken(
+    req: Request<{}, ApiResponse<NsacApiResponse>, BasicNsacApiRequest>,
+    res: Response,
+    next: NextFunction
+) {
     try {
-        // 1. Valida se as credenciais funcionam no sistema NSAC
+        const { email, password } = req.body;
+        const jwtToken = req.headers.authorization?.split(" ")[1] as string;
+
+        const payload = jwt.decode(jwtToken) as jwtTokenPayload; // n pode ser null porque passa pelo middlware que valida ele.
+
+        if (!payload || !payload.id_User)
+            throw new AppError(
+                "Invalid JWT token",
+                401,
+                "AUTH_MISSING_PAYLOAD"
+            );
+
+        const userId = payload.id_User;
+
+        const emptyFields = verifyEmptyFields({ email, password, userId });
+        if (emptyFields.length != 0) {
+            const errors = emptyFields.map((field) => ({
+                field: field,
+                message: `Empty field ${field}`,
+                code: "AUTH_MISSING_FIELD",
+            }));
+            throw new MultiAppErrors(errors);
+        }
+        // Valida se as credenciais funcionam no sistema NSAC
         const loginNsac = await login(email, password);
 
         const encryptedPassword = encrypt(password);
@@ -74,8 +71,6 @@ export async function createToken(req: Request, res: Response) {
 
         let nsacAccountId: number;
 
-        // 2. VERIFICAÇÃO (Sem Update)
-        // Buscamos se o email já existe no banco
         const existingAccount = await queryOne<{ id_NsacAccount: number }>(
             "SELECT id_NsacAccount FROM NsacAccount WHERE email = ?",
             [email],
@@ -94,7 +89,7 @@ export async function createToken(req: Request, res: Response) {
             console.log("Novo email registrado.");
         }
 
-        if (!nsacAccountId) throw new Error("Failed to resolve NsacAccount ID");
+        if (!nsacAccountId) throw new Error("Failed to resolve nsacAccountId while creating token.");
 
         await runSql(
             "DELETE FROM apiToken WHERE id_User = ? AND id_NsacAccount = ?",
@@ -108,74 +103,45 @@ export async function createToken(req: Request, res: Response) {
             db
         );
 
-        if (!apiTokenId) throw new Error("Failed to insert apiToken");
+        if (!apiTokenId) throw new Error("Failed to insert apiToken while creating token.");
 
-        response.data = {
+        const data = {
             userId: userId,
             nsacAccountId: nsacAccountId,
             apiToken: apiToken,
         };
-        response.errors = [];
 
-        return res.status(200).json(response);
+        return res.status(200).json(success(data));
     } catch (err: any) {
-        console.log(err);
-
-        if (err.message && err.message.includes("UNIQUE constraint failed")) {
-            response.errors = [{ error: "Internal conflict error." }];
-        } else if (
-            err.message &&
-            err.message.includes("Wrong NSAC email or password")
-        ) {
-            response.errors = [{ error: "Wrong NSAC email or password" }];
-            return res.status(500).json(response);
-        } else {
-            response.errors = [{ error: "Internal server error" }];
-        }
-
-        return res.status(500).json(response);
+        next(err);
     }
 }
 
-export async function getTokens(req: Request, res: Response) {
-    if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-    }
-    let response = {
-        errors: [{}],
-        data: {},
-    };
+export async function getTokens(
+    req: Request<{}, ApiResponse<NsacTokensResponse>>,
+    res: Response
+) {
     const jwtToken = req.headers.authorization?.split(" ")[1] as string;
     const payload = jwt.decode(jwtToken) as jwtTokenPayload;
     const userId = payload.id_User;
 
-    console.log({
-        jwtToken,
-        payload,
-        userId,
-    });
-
     try {
-        const apiTokenIds = await getSql(
+        const apiTokenIds = await getSql<NsacToken>(
             "SELECT token, id_NsacAccount FROM apiToken WHERE id_User = ?",
             [userId],
             db
         );
-        console.log(apiTokenIds);
 
-        response.data = {
+        const data: NsacTokensResponse = {
             ...apiTokenIds,
         };
 
-        res.status(200).json({ apiTokenIds });
+        res.status(200).json(success(data));
     } catch (err) {
-        response.errors = [
-            {
-                error: "Internal server error",
-            },
-        ];
         console.log(err);
-        return res.status(500).json(response);
+        return res
+            .status(500)
+            .json(singleError("Internal server errror", "API_SERVER_ERROR"));
     }
 }
 
@@ -183,7 +149,9 @@ export async function checkApiKeyAuth(req: Request, res: Response) {
     const APIToken = req.headers["x-api-token"] as string;
 
     if (!APIToken)
-        return res.status(401).json({ error: "No API Token provided." });
+        return res
+            .status(401)
+            .json(singleError("No API Token provided", "AUTH_NO_API_TOKEN"));
 
     try {
         const apiTokenId = await runSql(
@@ -204,10 +172,6 @@ export async function checkApiKeyAuth(req: Request, res: Response) {
 }
 
 export async function deleteTokens(req: Request, res: Response) {
-    if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-    }
-
     let response: ApiResponse = {
         errors: [],
         data: {},

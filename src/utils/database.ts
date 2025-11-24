@@ -1,5 +1,18 @@
+import { MongoClient, ServerApiVersion } from "mongodb";
 import sqlite3 from "sqlite3";
 const databaseLocation = ":memory:";
+const mongoDbUri = process.env.MONGODBURI;
+
+if(!mongoDbUri) process.exit(1);
+
+const client = new MongoClient(mongoDbUri, {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
+});
+
 const createUserTable = `
 CREATE TABLE IF NOT EXISTS User (
     id_User INTEGER PRIMARY KEY AUTOINCREMENT,

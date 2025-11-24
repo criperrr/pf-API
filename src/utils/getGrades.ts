@@ -1,7 +1,6 @@
 import * as cheerio from "cheerio";
 import hash from "object-hash";
 import { verifyCookie } from "./verifyCookie.js";
-import { log } from "console";
 
 function chunkArray(array: Array<any>, size: number) {
     const result = [];
@@ -38,17 +37,13 @@ export async function getGrades(
 
     const $ = cheerio.load(boletimHtml);
     const userCurrentYear = $("table").length; // quantidade de tabelas = ano atual (3 tabelas = 3 anos)
-    const anoIndex = userCurrentYear - ano;
+
     if (isNaN(ano) || !ano) ano = userCurrentYear;
     if (ano > userCurrentYear) ano = userCurrentYear;
-    console.log({
-        logToken,
-        ano,
-        APIToken,
-        userCurrentYear
-    })
 
-    const topTable = $("table")[anoIndex] ?? $("table")[0];
+    const anoIndex = userCurrentYear - ano;
+    const topTable = $("table")[anoIndex];
+    if(!topTable) return false;
     const tBody = $(topTable).find("tbody tr");
     const titles = $(tBody)
         .find("td span")
@@ -93,19 +88,18 @@ export async function getGrades(
     let userHashes: Array<string> = [];
 
     if (titles.length != finalGrades.length) return false;
-    else {
-        for (let i = 0; i < finalGrades.length; i++) {
-            grades.push({
-                name: titles[i],
-                grades: finalGrades[i],
-            });
-            finalUserGrades.push({
-                name: titles[i],
-                grades: userArray[i],
-            });
-            hashes[i] = hash(grades[i] as hash.NotUndefined);
-            userHashes[i] = hash(userGrades[i] as hash.NotUndefined);
-        }
+
+    for (let i = 0; i < finalGrades.length; i++) {
+        grades.push({
+            name: titles[i],
+            grades: finalGrades[i],
+        });
+        finalUserGrades.push({
+            name: titles[i],
+            grades: userArray[i],
+        });
+        hashes[i] = hash(grades[i] as hash.NotUndefined);
+        userHashes[i] = hash(userGrades[i] as hash.NotUndefined);
     }
 
     return {
