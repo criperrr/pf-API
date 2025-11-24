@@ -145,7 +145,7 @@ export async function login(req: Request, res: Response) {
             secretKey,
             {
                 expiresIn: "24h",
-                issuer: "Vitinho", // desculpa
+                issuer: "Vitinho", // desculpa vitinho :)
             }
         );
         console.log("User with email " + email + " logged in.");

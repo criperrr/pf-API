@@ -455,7 +455,6 @@ export async function getAllGrades(
             );
         }
 
-        // Assume que 'grades' retorna o objeto completo
         const data = {
             ...grades,
         } as FullGradesData;

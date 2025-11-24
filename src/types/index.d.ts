@@ -68,7 +68,7 @@ export interface GradesQuery {
 }
 
 
-// Interfaces para os dados de notas (baseado no que vi no seu código)
+// Interfaces para os dados de notas
 export interface GradeItem {
     name: string;
     grades: string[];

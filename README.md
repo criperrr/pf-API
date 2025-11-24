@@ -3,57 +3,42 @@
 <div align="center">
     <img src="https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js" alt="Node.js Badge">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript" alt="TypeScript Badge">
-    <img src="https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express" alt="Express.js Badge">
+    <img src="https://img.shields.io/badge/Express.js-5.x-lightgrey?style=for-the-badge&logo=express" alt="Express.js Badge">
     <img src="https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite" alt="SQLite Badge">
     <img src="https://img.shields.io/badge/Cheerio-:)-orange?style=for-the-badge&logo=cheerio" alt="Cheerio Badge">
 </div>
 
 # O que é esse projeto?
 
-Este projeto consiste em uma **API RESTful** robusta, desenvolvida utilizando **TypeScript** e o framework **Express.js**.
+Este projeto consiste em uma **API RESTful** robusta (espero eu), desenvolvida utilizando **TypeScript** e o framework **Express.js**.
 
 Nosso foco é solucionar um desafio enfrentado pela comunidade acadêmica: a dificuldade de acesso e uso automatizado dos dados fornecidos pelo **NSAC Online**.
 
-O NSAC Online é a **única** plataforma para a consulta de notas e médias finais dos alunos do Colégio Técnico Industrial (UNESP). No entanto, sua arquitetura é uma **aplicação monolítica** (provavelmente em PHP/Laravel) que **não disponibiliza** uma Interface de Programação de Aplicações (API) pública. Todas as interações resultam no retorno de páginas em **HTML puro**.
+O NSAC Online é a **única** plataforma para a consulta de notas e médias finais dos alunos do Colégio Técnico Industrial (UNESP). No entanto, sua arquitetura é uma **aplicação monolítica** que **não disponibiliza** uma Interface de Programação de Aplicações (API) pública. Todas as interações resultam no retorno de páginas em **HTML puro**.
 
 Nossa API atua como uma **camada de abstração** vital, transformando a complexidade de interagir com o HTML do NSAC em _endpoints_ limpos e fáceis de usar. Isso permite que qualquer aplicação externa — seja um bot no Discord, um serviço de notificação no WhatsApp ou um aplicativo móvel — possa consumir esses dados de forma moderna e eficiente, utilizando o formato **JSON**.
-
-## Antes de tudo, o que é _Web Scraping_? 🕵️
-Para viabilizar essa abstração, o projeto emprega a técnica de **Web Scraping** (ou Raspagem de Dados).
-
-Scraping é uma técnica utilizada para **coletar informações estruturadas** de sites que não fornecem um canal de acesso direto (como uma API nativa exposta publicamente).
-
-#### Como Funciona:
-
-1.  **Simulação:** Em vez de o usuário acessar o site manualmente, nossa API simula a interação de um navegador real.
-2.  **Captura:** O usuário envia seu login e senha para nossa API. Nós autenticamos no NSAC, capturamos os cookies de sessão e geramos um **APIToken** exclusivo para o usuário.
-3.  **Extração:** Quando você solicita suas notas, a API usa esse token para acessar as páginas internas do NSAC, baixar o HTML e "ler" os dados relevantes (notas, faltas, matérias).
-4.  **Transformação:** Os dados extraídos são limpos e convertidos de tabelas HTML complexas para um formato **JSON** estruturado.
-5.  **Entrega:** A API entrega esse JSON pronto para uso ao desenvolvedor.
-6.  **Sua vez**: Você apresenta esses dados para o usuário final na plataforma que preferir.
 
 ## Tecnologias utilizadas:
 
 ![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js) <br>
-O [NodeJS](https://nodejs.org/en) é o ambiente de execução assíncrono que hospeda a API. Escolhemos a versão **18+** para aproveitar melhorias de performance e recursos recentes.
+O [NodeJS](https://nodejs.org/en) é o ambiente de execução assíncrono que hospeda a API.
 
 ![TypeScript 5.x](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)<br>
-O [TypeScript](https://www.typescriptlang.org/) garante tipagem estática, resultando em um código mais robusto e seguro, essencial para a manipulação precisa dos dados extraídos.
+O [TypeScript](https://www.typescriptlang.org/) garante tipagem estática, resultando em um código mais robusto e seguro.
 
-![Express.js 4.x](https://img.shields.io/badge/Express.js-4.x-lightgrey?style=for-the-badge&logo=express)<br>
-O [Express.js](https://expressjs.com/) estrutura a **API RESTful**, gerenciando rotas, middlewares e as respostas HTTP/JSON.
+![Express.js 5.x](https://img.shields.io/badge/Express.js-5.x-lightgrey?style=for-the-badge&logo=express)<br>
+O [Express.js](https://expressjs.com/) (versão 5) estrutura a **API RESTful**, gerenciando rotas, middlewares e as respostas HTTP/JSON.
 
 ![Cheerio](https://img.shields.io/badge/Cheerio-:D-orange?style=for-the-badge&logo=cheerio)<br>
-O [Cheerio](https://cheerio.js.org/) é a "alma" do _Scraping_. Ele analisa o HTML retornado pelo NSAC com uma sintaxe similar ao jQuery, permitindo localizar e extrair notas e médias rapidamente.
+O [Cheerio](https://cheerio.js.org/) é a "alma" do _Scraping_. Ele analisa o HTML retornado pelo NSAC para localizar e extrair notas e médias.
 
 ![SQLite 3](https://img.shields.io/badge/SQLite-3-blue?style=for-the-badge&logo=sqlite)<br>
-O [SQLite3](https://sqlite.org/) é utilizado para armazenar usuários, contas vinculadas e tokens de sessão de forma leve e local, sem necessidade de configurar um servidor de banco de dados complexo.
+O [SQLite3](https://sqlite.org/) é utilizado para armazenar usuários, contas vinculadas e tokens de sessão localmente.
 
 # ⚙️ Como Começar
 ## Pré-requisitos
 1. NodeJS 18 ou superior.
 2. NPM ou outro gerenciador de pacotes (yarn, pnpm).
-3. Um cérebro funcional.
 
 ## **Instalação**
 1.  **Clone o repositório:**
@@ -75,16 +60,37 @@ O [SQLite3](https://sqlite.org/) é utilizado para armazenar usuários, contas v
     SECRETKEY="sua_chave_jwt_super_secreta"
 
     # Chave para criptografar os cookies do NSAC no banco de dados (AES-256)
-    ENCRYPTIONKEY="chave_hexadecimal_com_32_bytes" 
     # Dica: Gere uma chave válida com: openssl rand -hex 32
+    ENCRYPTIONKEY="chave_hexadecimal_com_32_bytes" 
+    
+    # URI de conexão (obrigatório para inicialização)
+    MONGODBURI="sua_connection_string_mongo"
     ```
- 4. **Execute o servidor em modo de desenvolvimento:** O servidor irá reiniciar automaticamente a cada alteração no código.
+ 4. **Execute o servidor em modo de desenvolvimento:**
     ```bash
     npm run dev 
     ``` 
   O servidor estará rodando em `http://localhost:3000`.
 
 # 📚 Documentação da API
+
+**Formato padrão de resposta:**
+Todas as requisições bem-sucedidas retornam um objeto JSON no seguinte formato:
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+Em caso de erro:
+```json
+{
+  "success": false,
+  "errors": [ { "message": "...", "code": "..." } ]
+}
+```
+
+---
 
 ## 🔐 Autenticação (`/api/auth`)
 Endpoints para criar e logar usuários **na API**.
@@ -103,8 +109,8 @@ Cria um novo usuário para utilizar a API.
    }
    ```
 - **Respostas:**
-    - `201 Created`: Usuário criado com sucesso.
-    - `400 Bad Request`: Campos inválidos.
+    - `201 Created`: Usuário criado.
+    - `400 Bad Request`: Campos inválidos ou faltando.
     - `409 Conflict`: E-mail já existe.
 
 #### 2. Login
@@ -120,7 +126,16 @@ Autentica e retorna um **Token JWT** (Bearer Token) necessário para gerenciar a
     }
     ```
 - **Respostas:**
-    - `200 OK`: Retorna o token no corpo e no header `Authorization`.
+    - `200 OK`: O token é retornado no header `Authorization` (`Bearer <token>`). O corpo contém:
+      ```json
+      {
+        "success": true,
+        "data": {
+            "message": "Logged succesfully",
+            "userId": 1
+        }
+      }
+      ```
     - `401 Unauthorized`: Credenciais inválidas.
 
 ---
@@ -144,12 +159,13 @@ Realiza o login no portal NSAC, captura os cookies, criptografa-os e gera um **A
 - **Resposta Sucesso (200 OK):**
     ```jsonc
     {
+        "success": true,
         "data": {
+            "message": "Token created successfully",
             "userId": 1,
             "nsacAccountId": 10,
             "apiToken": "TOK3N_GERAD0_PARA_CONSULTAR_NOTAS"
-        },
-        "errors": []
+        }
     }
     ```
 
@@ -161,8 +177,10 @@ Retorna todos os tokens de API gerados pelo seu usuário.
 - **Resposta (200 OK):**
     ```jsonc
     {
-        "apiTokenIds": [
-            { "token": "TOK3N...", "id_NsacAccount": 10 }
+        "success": true,
+        "data": [
+            { "token": "TOK3N...", "id_NsacAccount": 10 },
+            { "token": "OUTR0...", "id_NsacAccount": 12 }
         ]
     }
     ```
@@ -178,6 +196,15 @@ Remove o vínculo de uma conta e invalida o token.
       "token": "SEU_APITOKEN_AQUI"
     }
     ```
+- **Resposta (200 OK):**
+    ```jsonc
+    {
+        "success": true,
+        "data": {
+            "message": "Success! Token unlinked from your account and deleted from DB."
+        }
+    }
+    ```
 
 ---
 
@@ -185,7 +212,7 @@ Remove o vínculo de uma conta e invalida o token.
 Endpoints para realizar o scraping das notas.
 
 ### ⚠️ Regras de Autenticação dos Endpoints
-1. O Header `x-api-token` é **obrigatório** em todas as rotas abaixo (verificação de segurança).
+1. O Header `x-api-token` é **obrigatório** em todas as rotas abaixo. Este é o token gerado na rota de vincular conta (item 1 da seção anterior), **não** é o JWT de login.
 
 #### 4. Consultar Boletim Completo
 `GET /api/nsac/grades`
@@ -195,11 +222,12 @@ Retorna o panorama completo: notas da turma, notas do usuário e hashes de integ
 - **Headers Obrigatórios:**
     - `x-api-token`: `<SEU_APITOKEN>`
 - **Query Params:**
-    - `ano`: Número do ano letivo (ex: `3`).
-- **Exemplo de URL:** `/api/nsac/grades?ano=3`
+    - `year`: Número do ano letivo (ex: `3`).
+- **Exemplo de URL:** `/api/nsac/grades?year=3`
 - **Resposta (200 OK):**
   ```json
   {
+    "success": true,
     "data": {
         "gradesLenght": 15,
         "userCurrentYear": 3,
@@ -214,16 +242,17 @@ Retorna o panorama completo: notas da turma, notas do usuário e hashes de integ
 #### 5. Consultar Apenas Notas da Turma
 `GET /api/nsac/grades/class`
 
-Retorna apenas a lista de matérias e as notas gerais da sala.
+Retorna apenas a lista de matérias e as notas gerais da sala (raspagem anônima).
 
 - **Headers Obrigatórios:**
     - `x-api-token`: `<SEU_APITOKEN>`
 - **Query Params:**
-    - `ano`: Número do ano letivo.
-- **Exemplo de URL:** `/api/nsac/grades/class?ano=3`
+    - `year`: Número do ano letivo.
+- **Exemplo de URL:** `/api/nsac/grades/class?year=3`
 - **Resposta (200 OK):**
   ```jsonc
   {
+    "success": true,
     "data": {
         "generalHashes": ["..."],
         "generalGrades": [
@@ -241,11 +270,12 @@ Retorna apenas as notas do aluno dono do token.
 - **Headers Obrigatórios:**
     - `x-api-token`: `<SEU_APITOKEN>`
 - **Query Params:**
-    - `ano`: Número do ano letivo.
-- **Exemplo de URL:** `/api/nsac/grades/private?ano=3`
+    - `year`: Número do ano letivo.
+- **Exemplo de URL:** `/api/nsac/grades/private?year=3`
 - **Resposta (200 OK):**
   ```jsonc
   {
+    "success": true,
     "data": {
         "userCurrentYear": 3,
         "userHashes": ["..."],
@@ -255,3 +285,14 @@ Retorna apenas as notas do aluno dono do token.
     }
   }
   ```
+
+#### 7. Verificar Status do Token
+`GET /api/nsac/accounts/token-status`
+
+Verifica se um API Token é válido sem realizar scraping.
+
+- **Headers Obrigatórios:**
+    - `x-api-token`: `<SEU_APITOKEN>`
+- **Respostas:**
+    - `200 OK`: Token válido.
+    - `401 Unauthorized`: Token inválido ou não fornecido.
