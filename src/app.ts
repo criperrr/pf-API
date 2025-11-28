@@ -11,7 +11,7 @@ import { globalErrorHandling } from "./utils/errorHandler.js";
 
 const app: Express = e();
 
-app.use(globalErrorHandling);
+
 app.use(e.json());
 app.use(cors());
 app.use(e.urlencoded({ extended: true }));
@@ -24,3 +24,5 @@ app.listen(port, () => {
 
 app.use("/api/nsac", nsacRoutes);
 app.use("/api/auth", authRoutes);
+
+app.use(globalErrorHandling);

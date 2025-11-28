@@ -9,7 +9,7 @@ export class AppError extends Error {
         message: string,
         HTTPCode: number,
         errorCode: string,
-        field?: string
+        field?: string,
     ) {
         super(message);
         this.HTTPCode = HTTPCode;

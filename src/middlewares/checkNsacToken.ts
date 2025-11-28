@@ -1,22 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import db, { runSql } from "../utils/database.js";
-import { singleError } from "../utils/responseHelpers.js";
+import { AppError } from "../types/ApiError.js";
 
 export async function checkApiKeyAuth(
     req: Request,
     res: Response,
     next: NextFunction
 ) {
-    if (!req.body) {
-        return res
-            .status(400)
-            .json(singleError("Missing request body", "MISSING_REQUEST_BODY"));
-    }
+
     const APIToken = req.headers["x-api-token"] as string;
-    console.log("oi: " + APIToken);
 
     if (!APIToken)
-        return res.status(401).json({ error: "No API Token provided." });
+        throw new AppError("No token provived", 401, "AUTH_MISSING_TOKEN");
 
     try {
         const apiTokenId = await runSql(
@@ -24,14 +19,12 @@ export async function checkApiKeyAuth(
             [APIToken],
             db
         );
-        console.log(apiTokenId);
         if (apiTokenId > 0) {
             next();
         } else {
-            return res.status(401).json({ error: "Invalid API Token." });
+            throw new AppError("Invalid API token", 403, "AUTH_INVALID_TOKEN");
         }
-    } catch (err: any) {
-        console.log(err);
-        return res.status(500).json({ error: "Internal server error" });
+    } catch (err) {
+        next(err);
     }
 }

@@ -9,13 +9,9 @@ export function globalErrorHandling(
     next: NextFunction
 ) {
     if (err instanceof AppError) {
-        if (err.field)
-            return res
-                .status(err.HTTPCode)
-                .json(singleError(err.message, err.errorCode, err.field));
         return res
             .status(err.HTTPCode)
-            .json(singleError(err.message, err.errorCode));
+            .json(singleError(err.message, err.errorCode, err.field));
     }
 
     if (err instanceof MultiAppErrors)

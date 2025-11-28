@@ -18,11 +18,10 @@ export async function getGrades(
 ) {
     const testTokenResult = await verifyCookie(logToken, APIToken);
 
-    logToken = testTokenResult;
     const response = await fetch("http://200.145.153.1/nsac/aluno/boletim", {
         credentials: "include",
         headers: {
-            Cookie: logToken,
+            Cookie: testTokenResult,
         },
         referrer: "http://200.145.153.1/nsac/login",
         method: "GET",
@@ -33,13 +32,23 @@ export async function getGrades(
 
     const $ = cheerio.load(boletimHtml);
     const userCurrentYear = $("table").length; // quantidade de tabelas = ano atual (3 tabelas = 3 anos)
+    let warning: string | boolean = false;
+    if (isNaN(ano) || !ano)
+        throw new AppError(
+            "Invalid 'year' parameter",
+            400,
+            "INVALID_PARAM",
+            "year"
+        );
 
-    if (isNaN(ano) || !ano) ano = userCurrentYear;
-    if (ano > userCurrentYear) ano = userCurrentYear;
+    if (ano > userCurrentYear) {
+        warning = `Given year (${ano}) is bigger than userCurrentYear (${userCurrentYear}). Using userCurrentYear to scrap!`;
+        ano = userCurrentYear;
+    }
 
     const anoIndex = userCurrentYear - ano;
     const topTable = $("table")[anoIndex];
-    if(!topTable) return false;
+    if (!topTable) return false;
     const tBody = $(topTable).find("tbody tr");
     const titles = $(tBody)
         .find("td span")
@@ -99,6 +108,7 @@ export async function getGrades(
     }
 
     return {
+        warning: warning,
         generalGrades: grades,
         gradesLenght: titles.length,
         generalHashes: hashes,

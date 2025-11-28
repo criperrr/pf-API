@@ -1,8 +1,4 @@
-import {
-    ApiError,
-    ApiFailure,
-    ApiSucess,
-} from "../types/index.js";
+import { ApiError, ApiFailure, ApiSucess } from "../types/index.js";
 
 export function failure(error: ApiError[]): ApiFailure {
     return { success: false, errors: error };

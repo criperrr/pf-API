@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { singleError } from "../utils/responseHelpers.js";
+import { AppError } from "../types/ApiError.js";
 const secretKey: any = process.env.SECRETKEY;
 
 if (!secretKey) {
@@ -9,22 +9,26 @@ if (!secretKey) {
 }
 
 export function checkJwtAuth(req: Request, res: Response, next: NextFunction) {
-    if (!req.body) {
-        return res.status(400).json(singleError("Missing request body", "MISSING_REQUEST_BODY"));
-    }
-    const jwtToken = req.headers.authorization?.split(" ")[1];
 
-    if (!jwtToken) return res.status(401).json({ error: "No token provided." });
 
-    jwt.verify(jwtToken, secretKey, function (err: Error | null, _: any) {
+    const jwtToken = req.headers.authorization!.split(" ")[1];
+
+    if (!jwtToken)
+        throw new AppError("No token provived", 401, "AUTH_MISSING_TOKEN");
+
+    jwt.verify(jwtToken, secretKey, function (err: Error | null) {
         if (err) {
-            console.log(err.name);
+            console.log(err);
 
             if (err.name == "JsonWebTokenError") {
-                res.status(403).json({ error: "Invalid Token" });
+                throw new AppError(
+                    "Invalid JWT token",
+                    403,
+                    "AUTH_INVALID_TOKEN"
+                );
             }
         }
 
-        next("route");
+        next();
     });
 }

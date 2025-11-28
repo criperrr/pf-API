@@ -2,6 +2,7 @@
 export interface ApiError {
     code: string;
     message: string;
+    warning?: string;
     field?: string;
 }
 
@@ -65,6 +66,7 @@ export interface DeleteTokenRequest {
 // * Request Queries (Query Params)
 export interface GradesQuery {
     year?: string;
+    privateGrades?: string;
 }
 
 

@@ -1,7 +1,7 @@
 import { newUser, User } from "../models/index.js";
 import db, { queryOne, runSql } from "../utils/database.js";
 import verifyEmptyFields from "../utils/emptyFields.js";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import {
@@ -10,7 +10,8 @@ import {
     RegisterAuthRequest,
     RegisterDataResponse,
 } from "../types/index.js";
-import { failure, singleError, success } from "../utils/responseHelpers.js";
+import { success } from "../utils/responseHelpers.js";
+import { AppError, MultiAppErrors } from "../types/ApiError.js";
 
 const secretKey: any = process.env.SECRETKEY;
 if (!secretKey) {
@@ -20,12 +21,9 @@ if (!secretKey) {
 
 export async function register(
     req: Request<{}, ApiResponse<RegisterDataResponse>, RegisterAuthRequest>,
-    res: Response
+    res: Response,
+    next: NextFunction
 ) {
-    if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-    }
-
     const { name, email, password }: newUser = req.body;
 
     const emptyFields = verifyEmptyFields({ name, email, password });
@@ -35,19 +33,17 @@ export async function register(
             message: `Empty field ${field}`,
             code: "REG_MISSING_FIELD",
         }));
-        return res.status(400).json(failure(errors));
+        throw new MultiAppErrors(errors, 400);
     }
 
     const emailRegex = /[^\s@]+@+[^\s@]+\.+[^\s@]/;
     if (!emailRegex.test(email)) {
-        const error = [
-            {
-                field: "email",
-                message: "Invalid email",
-                code: "REG_INVALID_EMAIL_FORMAT",
-            },
-        ];
-        return res.status(400).json(failure(error));
+        throw new AppError(
+            "Invalid email",
+            400,
+            "REG_INVALID_EMAIL_FORMAT",
+            "email"
+        );
     }
 
     try {
@@ -75,34 +71,20 @@ export async function register(
         return res.status(201).json(success(data));
     } catch (err: any) {
         if (err.message.includes("UNIQUE constraint failed")) {
-            return res
-                .status(409)
-                .json(
-                    singleError(
-                        "This email is already registered.",
-                        "REG_DUPLICATED_EMAIL",
-                        "email"
-                    )
-                );
+            throw new AppError(
+                "This email is already registered.",
+                409,
+                "REG_DUPLICATED_EMAIL",
+                "email"
+            );
         }
 
         console.error("Error during registration:", err);
-        return res
-            .status(500)
-            .json(
-                singleError(
-                    "Internal server error. Please report it to a dev.",
-                    "API_SERVER_ERRROR"
-                )
-            );
+        next(err)
     }
 }
 
-export async function login(req: Request, res: Response) {
-    if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-    }
-
+export async function login(req: Request, res: Response, next: NextFunction) {
     const { email, password }: User = req.body;
 
     const emptyFields = verifyEmptyFields({ email, password });
@@ -113,7 +95,7 @@ export async function login(req: Request, res: Response) {
             message: `Empty field ${field}`,
             code: "REG_MISSING_FIELD",
         }));
-        return res.status(400).json(failure(errors));
+        throw new MultiAppErrors(errors, 400)
     }
     try {
         const { id_User, passwordHash }: User =
@@ -121,20 +103,13 @@ export async function login(req: Request, res: Response) {
                 "SELECT id_User, passwordHash FROM User WHERE email = ?",
                 [email],
                 db
-            )) ?? ({ id_User: null, passwordHash: null } as unknown as User);
+            )) ?? ({ id_User: null, passwordHash: null });
         const passMatch = id_User
             ? await bcrypt.compare(password, passwordHash)
             : false;
 
         if (!id_User || !passMatch) {
-            return res
-                .status(401)
-                .json(
-                    singleError(
-                        "Invalid email or password.",
-                        "AUTH_INVALID_CREDENTIALS"
-                    )
-                );
+            throw new AppError("Invalid email or password", 401, "AUTH_INVALID_CREDENTIALS");
         }
 
         const jwtToken = jwt.sign(
@@ -144,7 +119,7 @@ export async function login(req: Request, res: Response) {
             },
             secretKey,
             {
-                expiresIn: "24h",
+                expiresIn: "3h",
                 issuer: "Vitinho", // desculpa vitinho :)
             }
         );
@@ -160,9 +135,6 @@ export async function login(req: Request, res: Response) {
             .status(200)
             .json(success(successData));
     } catch (err: any) {
-        console.log("internal error during login", err);
-        return res
-            .status(500)
-            .json(singleError("Internal server error", "API_SERVER_ERROR"));
+        next(err)
     }
 }

@@ -177,8 +177,8 @@ export async function getTokens(
             [userId],
             db
         );
-        
-        const data: NsacTokensResponse = apiTokens
+
+        const data: NsacTokensResponse = apiTokens;
 
         res.status(200).json(success(data));
     } catch (err) {
@@ -261,156 +261,22 @@ export async function deleteTokens(
     }
 }
 
-export async function getClassGrades(
-    req: Request<{}, ApiResponse<ClassGradesData>, {}, GradesQuery>,
-    res: Response,
-    next: NextFunction
-) {
-    const apiToken = req.headers["x-api-token"] as string;
-    const { year } = req.query;
-
-    try {
-        if (!apiToken)
-            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
-        if (!year)
-            throw new AppError(
-                "Missing 'year' parameter",
-                400,
-                "MISSING_PARAM",
-                "year"
-            );
-
-        const yearNumber = Number(year);
-        if (isNaN(yearNumber))
-            throw new AppError(
-                "Invalid 'year' parameter",
-                400,
-                "INVALID_PARAM",
-                "year"
-            );
-
-        const tokenData = await queryOne<ApiToken>(
-            "SELECT cookieString FROM apiToken WHERE token = ?",
-            [apiToken],
-            db
-        );
-
-        if (!tokenData) {
-            throw new AppError(
-                "Token inválido ou não encontrado.",
-                401,
-                "INVALID_API_TOKEN"
-            );
-        }
-
-        const { cookieString } = tokenData;
-        const decryptedCookies = decrypt(cookieString);
-
-        const grades = await getGrades(decryptedCookies, yearNumber, apiToken);
-
-        if (!grades) {
-            throw new AppError(
-                "Failed to retrieve grades from source",
-                502,
-                "UPSTREAM_ERROR"
-            );
-        }
-
-        const data: ClassGradesData = {
-            generalHashes: grades.generalHashes,
-            generalGrades: grades.generalGrades as GradeItem[],
-        };
-
-        res.status(200).json(success(data));
-    } catch (err: any) {
-        if (err.message && err.message.includes("Invalid year URL parameter")) {
-            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
-        }
-        next(err);
-    }
-}
-
-export async function getPrivateGrades(
-    req: Request<{}, ApiResponse<PrivateGradesData>, {}, GradesQuery>,
-    res: Response,
-    next: NextFunction
-) {
-    const apiToken = req.headers["x-api-token"] as string;
-    const { year } = req.query;
-
-    try {
-        if (!apiToken)
-            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
-        if (!year)
-            throw new AppError(
-                "Missing 'year' parameter",
-                400,
-                "MISSING_PARAM",
-                "year"
-            );
-
-        const yearNumero = Number(year);
-        if (isNaN(yearNumero))
-            throw new AppError(
-                "Invalid 'year' parameter",
-                400,
-                "INVALID_PARAM",
-                "year"
-            );
-
-        const tokenData = await queryOne<ApiToken>(
-            "SELECT cookieString FROM apiToken WHERE token = ?",
-            [apiToken],
-            db
-        );
-
-        if (!tokenData) {
-            throw new AppError(
-                "Token inválido ou não encontrado.",
-                401,
-                "INVALID_API_TOKEN"
-            );
-        }
-
-        const { cookieString } = tokenData;
-        const decryptedCookies = decrypt(cookieString);
-
-        const grades = await getGrades(decryptedCookies, yearNumero, apiToken);
-
-        if (!grades) {
-            throw new AppError(
-                "Failed to retrieve grades from source",
-                502,
-                "UPSTREAM_ERROR"
-            );
-        }
-
-        const data: PrivateGradesData = {
-            userCurrentYear: grades.userCurrentYear,
-            userHashes: grades.userHashes,
-            userGrades: grades.userGrades as GradeItem[],
-        };
-
-        res.status(200).json(success(data));
-    } catch (err: any) {
-        if (err.message && err.message.includes("Invalid year URL parameter")) {
-            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
-        }
-        next(err);
-    }
-}
-
-export async function getAllGrades(
+export async function getApiGrades(
     req: Request<{}, ApiResponse<FullGradesData>, {}, GradesQuery>,
     res: Response,
     next: NextFunction
 ) {
     const apiToken = req.headers["x-api-token"] as string;
-    const { year } = req.query;
+    /**
+     * @param {number} year - se for null, futuramente, pretendo que ele não de problema e retorne todo o histórico escolar (bem viável mas extremamente pesado)
+     * @param {boolean} privateGrades - notas particulares do aluno, se true ele pega os objetos do usuário da função de scrapping
+     */
 
     try {
+        const { year, privateGrades } = req.query;
         if (!apiToken)
             throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
+
         if (!year)
             throw new AppError(
                 "Missing 'year' parameter",
@@ -420,6 +286,7 @@ export async function getAllGrades(
             );
 
         const yearNumero = Number(year);
+
         if (isNaN(yearNumero))
             throw new AppError(
                 "Invalid 'year' parameter",
@@ -427,6 +294,22 @@ export async function getAllGrades(
                 "INVALID_PARAM",
                 "year"
             );
+
+        if (
+            privateGrades &&
+            privateGrades != "false" &&
+            privateGrades != "true"
+        )
+            throw new AppError(
+                "Invalid 'privateGrades' parameter",
+                400,
+                "INVALID_PARAM",
+                "year"
+            );
+
+        const privateGradesBool = privateGrades
+            ? privateGrades === "true"
+            : undefined;
 
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
@@ -436,7 +319,7 @@ export async function getAllGrades(
 
         if (!tokenData) {
             throw new AppError(
-                "Token inválido ou não encontrado.",
+                "Invalid token or not found (internal server error)",
                 401,
                 "INVALID_API_TOKEN"
             );
@@ -449,15 +332,30 @@ export async function getAllGrades(
 
         if (!grades) {
             throw new AppError(
-                "Failed to retrieve grades from source",
+                "Failed to retrieve grades from NSAC",
                 502,
                 "UPSTREAM_ERROR"
             );
         }
-
-        const data = {
-            ...grades,
-        } as FullGradesData;
+        let data = {};
+        if (privateGradesBool === true) {
+            data = {
+                warning: grades.warning,
+                userCurrentYear: grades.userCurrentYear,
+                userHashes: grades.userHashes,
+                userGrades: grades.userGrades as GradeItem[],
+            } as PrivateGradesData;
+        } else if (privateGradesBool === false) {
+            data = {
+                warning: grades.warning,
+                generalGrades: grades.generalGrades,
+                generalHashes: grades.generalHashes,
+            } as ClassGradesData;
+        } else {
+            data = {
+                ...grades,
+            } as FullGradesData;
+        }
 
         res.status(200).json(success(data));
     } catch (err: any) {

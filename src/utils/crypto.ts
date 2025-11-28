@@ -6,7 +6,6 @@ const secret = process.env.ENCRYPTIONKEY as string;
 if (!secret) throw new Error("No key defined.");
 const key = Buffer.from(secret, "hex");
 
-
 export function encrypt(message: string): string {
     const iv = crypto.randomBytes(16);
 
@@ -50,15 +49,6 @@ export function decrypt(message: string): string {
 }
 
 export function generateRandomString(length: number) {
-    let result = "";
-    const characters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    const charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(
-            Math.floor(Math.random() * charactersLength)
-        );
-    }
-    return result;
+    return crypto.randomBytes(length).toString("hex").toUpperCase();
 }
 console.log();
