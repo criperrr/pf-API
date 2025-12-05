@@ -18,6 +18,12 @@ O NSAC Online é a **única** plataforma para a consulta de notas e médias fina
 
 Nossa API atua como uma **camada de abstração** vital, transformando a complexidade de interagir com o HTML do NSAC em _endpoints_ limpos e fáceis de usar. Isso permite que qualquer aplicação externa — seja um bot no Discord, um serviço de notificação no WhatsApp ou um aplicativo móvel — possa consumir esses dados de forma moderna e eficiente, utilizando o formato **JSON**.
 
+## Ainda a ser feito:
+- Reestruturação do queryparams e um filtrador completo do objeto do boletim
+- Adicionar um token master pra dev (deveria estar pronto)
+- Integrar o MongoDB completamente
+- Deixar a API rodando no Netlify
+
 ## Tecnologias utilizadas:
 
 ![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js) <br>
