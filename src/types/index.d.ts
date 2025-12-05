@@ -69,24 +69,59 @@ export interface GradesQuery {
     privateGrades?: string;
 }
 
+// FUll srapping type helpers
 
-// Interfaces para os dados de notas
-export interface GradeItem {
-    name: string;
-    grades: string[];
+export type recoveryStatusCode = "SAT" | "INS" | "NC" | "NAC";
+export type recoveryMessages =
+    | "Satisfatório"
+    | "Insatisfatório"
+    | "Não Compareceu"
+    | "Não aconteceu";
+
+export interface BoletimData {
+    yearCount: number;
+    yearsInfo: Array<YearInfo>;
 }
 
-export interface ClassGradesData {
-    generalHashes: string[];
-    generalGrades: GradeItem[];
+export interface YearInfo {
+    tittle: string;
+    year: number;
+    status: string;
+    results: Array<ResultData>;
+    grades: Array<FullGrades>;
+    bimestersData: Array<BimesterData>;
 }
 
-export interface PrivateGradesData {
-    userCurrentYear: number;
-    userHashes: string[];
-    userGrades: GradeItem[];
+export interface ResultData {
+    gradeName: string;
+    grade: number;
+    totalAbsences: number;
 }
 
-export interface FullGradesData extends ClassGradesData, PrivateGradesData {
-    gradesLenght?: number;
+export interface FullGrades {
+    // uma row da tabela
+    gradeName: string;
+    userGrades: Array<PersonalBiInformation>;
+    classGrades: Array<ClassBiInformation>;
+}
+
+export interface BimesterData {
+    userAvarage: number;
+    classAvarage: number;
+    totalAbsences: number;
+}
+
+export interface PersonalBiInformation {
+    // Personal (the student) Bimester Information
+    grade: number;
+    absences: number;
+    recovery: Boolean;
+    recovered?: Boolean;
+    recoveryCode?: recoveryStatusCode; // "SAT", "INS", "NC", "NAC"
+    recoveryMessage?: recoveryMessages; // "Saturado, "Insaturado", "Não compareceu", "Não aconteceu"
+}
+1;
+export interface ClassBiInformation {
+    // Class Bimester Information
+    avarageGrade: number;
 }

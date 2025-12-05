@@ -7,7 +7,6 @@ export async function checkApiKeyAuth(
     res: Response,
     next: NextFunction
 ) {
-
     const APIToken = req.headers["x-api-token"] as string;
 
     if (!APIToken)

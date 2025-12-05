@@ -16,10 +16,6 @@ import {
     DeleteTokenRequest,
     DeleteTokenResponse,
     GradesQuery,
-    ClassGradesData,
-    PrivateGradesData,
-    FullGradesData,
-    GradeItem,
 } from "../types/index.js";
 import { success } from "../utils/responseHelpers.js";
 import { AppError, MultiAppErrors } from "../types/ApiError.js";
@@ -262,7 +258,7 @@ export async function deleteTokens(
 }
 
 export async function getApiGrades(
-    req: Request<{}, ApiResponse<FullGradesData>, {}, GradesQuery>,
+    req: Request<{}, ApiResponse<any>, {}, GradesQuery>,
     res: Response,
     next: NextFunction
 ) {
@@ -295,21 +291,18 @@ export async function getApiGrades(
                 "year"
             );
 
-        if (
-            privateGrades &&
-            privateGrades != "false" &&
-            privateGrades != "true"
-        )
-            throw new AppError(
-                "Invalid 'privateGrades' parameter",
-                400,
-                "INVALID_PARAM",
-                "year"
-            );
+        // if (
+        //     privateGrades &&
+        //     privateGrades != "false" &&
+        //     privateGrades != "true"
+        // )
+        //     throw new AppError(
+        //         "Invalid 'privateGrades' parameter",
+        //         400,
+        //         "INVALID_PARAM",
+        //         "year"
+        //     );
 
-        const privateGradesBool = privateGrades
-            ? privateGrades === "true"
-            : undefined;
 
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
@@ -337,25 +330,9 @@ export async function getApiGrades(
                 "UPSTREAM_ERROR"
             );
         }
-        let data = {};
-        if (privateGradesBool === true) {
-            data = {
-                warning: grades.warning,
-                userCurrentYear: grades.userCurrentYear,
-                userHashes: grades.userHashes,
-                userGrades: grades.userGrades as GradeItem[],
-            } as PrivateGradesData;
-        } else if (privateGradesBool === false) {
-            data = {
-                warning: grades.warning,
-                generalGrades: grades.generalGrades,
-                generalHashes: grades.generalHashes,
-            } as ClassGradesData;
-        } else {
-            data = {
-                ...grades,
-            } as FullGradesData;
-        }
+        let data = {
+            ...grades,
+        } as any;
 
         res.status(200).json(success(data));
     } catch (err: any) {
