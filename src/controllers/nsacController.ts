@@ -272,24 +272,18 @@ export async function getApiGrades(
         const { year, privateGrades } = req.query;
         if (!apiToken)
             throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
+        let yearNumber = 0;
+        if (year) {
+            yearNumber = Number(year);
 
-        if (!year)
-            throw new AppError(
-                "Missing 'year' parameter",
-                400,
-                "MISSING_PARAM",
-                "year"
-            );
-
-        const yearNumero = Number(year);
-
-        if (isNaN(yearNumero))
-            throw new AppError(
-                "Invalid 'year' parameter",
-                400,
-                "INVALID_PARAM",
-                "year"
-            );
+            if (isNaN(yearNumber) || !Number.isInteger(yearNumber))
+                throw new AppError(
+                    "Invalid 'year' parameter",
+                    400,
+                    "INVALID_PARAM",
+                    "year"
+                );
+        }
 
         // if (
         //     privateGrades &&
@@ -302,7 +296,6 @@ export async function getApiGrades(
         //         "INVALID_PARAM",
         //         "year"
         //     );
-
 
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
@@ -321,7 +314,7 @@ export async function getApiGrades(
         const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, yearNumero, apiToken);
+        const grades = await getGrades(decryptedCookies, apiToken, yearNumber);
 
         if (!grades) {
             throw new AppError(

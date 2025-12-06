@@ -87,13 +87,11 @@ export interface YearInfo {
     tittle: string;
     year: number;
     status: string;
-    results: Array<ResultData>;
     grades: Array<FullGrades>;
     bimestersData: Array<BimesterData>;
 }
 
 export interface ResultData {
-    gradeName: string;
     grade: number;
     totalAbsences: number;
 }
@@ -103,6 +101,7 @@ export interface FullGrades {
     gradeName: string;
     userGrades: Array<PersonalBiInformation>;
     classGrades: Array<ClassBiInformation>;
+    results: ResultData
 }
 
 export interface BimesterData {
