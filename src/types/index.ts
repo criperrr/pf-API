@@ -39,7 +39,7 @@ export interface NsacApiResponse {
     apiToken: string;
 }
 
-interface NsacToken {
+export interface NsacToken {
     token: string;
     id_NsacAccount: number;
 }
@@ -64,10 +64,55 @@ export interface DeleteTokenRequest {
 }
 
 // * Request Queries (Query Params)
-export interface GradesQuery {
-    year?: string;
-    privateGrades?: string;
+// --- Filtros Genéricos ---
+export type NumberFilter = {
+    eq?: number;
+    neq?: number;
+    gt?: number;
+    gte?: number;
+    lt?: number;
+    lte?: number;
+};
+
+export type StringFilter = {
+    eq?: string;
+    contains?: string;
+    startsWith?: string;
+};
+
+export type BooleanFilter = {
+    eq?: boolean;
+};
+
+export type FilterBuilder<T> = {
+    [K in keyof T]?: T[K] extends number | undefined
+        ? NumberFilter | number
+        : T[K] extends string | undefined
+        ? StringFilter | string
+        : T[K] extends boolean | undefined
+        ? BooleanFilter | boolean
+        : T[K];
+};
+
+// --- Query  ---
+export interface Query {
+    // Contexto Geral
+    schoolYear?: number; // Ex: "2"
+    subjectName?: string; // Ex: "Matemática", "Mat"
+
+    // Contexto Bimestral
+    targetBimester?: number; // 1, 2, 3, 4
+
+    // Valores
+    grade?: number; // se targetBimester n for undefined, ele busca pelo filtro da nota dentro daquele bimestre
+    classAverage?: number;
+
+    // Status
+    isRecovery?: boolean; // Se ficou de recuperação
+    recoveryCode?: string; // Ex: "SAT"
 }
+
+export interface QueryFilter extends FilterBuilder<Query> {}
 
 // FUll srapping type helpers
 
@@ -98,15 +143,15 @@ export interface ResultData {
 
 export interface FullGrades {
     // uma row da tabela
-    gradeName: string;
+    subjectName: string;
     userGrades: Array<PersonalBiInformation>;
     classGrades: Array<ClassBiInformation>;
-    results: ResultData
+    results: ResultData;
 }
 
 export interface BimesterData {
-    userAvarage: number;
-    classAvarage: number;
+    userAverage: number;
+    classAverage: number;
     totalAbsences: number;
 }
 
@@ -122,5 +167,11 @@ export interface PersonalBiInformation {
 1;
 export interface ClassBiInformation {
     // Class Bimester Information
-    avarageGrade: number;
+    averageGrade: number;
+}
+
+export interface AllYearsInfo {
+    warning: boolean | string;
+    userCurrentYear: number;
+    data: YearInfo[];
 }

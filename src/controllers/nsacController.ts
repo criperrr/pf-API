@@ -15,10 +15,11 @@ import {
     NsacTokensResponse,
     DeleteTokenRequest,
     DeleteTokenResponse,
-    GradesQuery,
+    QueryFilter,
 } from "../types/index.js";
 import { success } from "../utils/responseHelpers.js";
 import { AppError, MultiAppErrors } from "../types/ApiError.js";
+import { filterQuery } from "../utils/gradesFilter.js";
 
 interface JwtTokenPayload {
     id_User: string;
@@ -35,31 +36,19 @@ export async function createToken(
 
         // acho que é impossível chegar aq mas pro typescript n encher o saco é isso ai
         if (!req.headers.authorization) {
-            throw new AppError(
-                "No Authorization header",
-                401,
-                "AUTH_HEADER_MISSING"
-            );
+            throw new AppError("No Authorization header", 401, "AUTH_HEADER_MISSING");
         }
 
         const jwtToken = req.headers.authorization.split(" ")[1];
 
         if (!jwtToken) {
-            throw new AppError(
-                "Invalid JWT token format.",
-                401,
-                "AUTH_INVALID_PAYLOAD"
-            );
+            throw new AppError("Invalid JWT token format.", 401, "AUTH_INVALID_PAYLOAD");
         }
 
         const payload = jwt.decode(jwtToken) as JwtTokenPayload;
 
         if (!payload || !payload.id_User) {
-            throw new AppError(
-                "Invalid JWT token",
-                401,
-                "AUTH_MISSING_PAYLOAD"
-            );
+            throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
         }
 
         const userId = payload.id_User;
@@ -148,22 +137,14 @@ export async function getTokens(
 ) {
     try {
         if (!req.headers.authorization) {
-            throw new AppError(
-                "No Authorization header",
-                401,
-                "AUTH_HEADER_MISSING"
-            );
+            throw new AppError("No Authorization header", 401, "AUTH_HEADER_MISSING");
         }
 
         const jwtToken = req.headers.authorization.split(" ")[1] as string;
         const payload = jwt.decode(jwtToken) as unknown as JwtTokenPayload;
 
         if (!payload || !payload.id_User) {
-            throw new AppError(
-                "Invalid JWT payload",
-                401,
-                "AUTH_INVALID_TOKEN"
-            );
+            throw new AppError("Invalid JWT payload", 401, "AUTH_INVALID_TOKEN");
         }
 
         const userId = payload.id_User;
@@ -183,20 +164,12 @@ export async function getTokens(
 }
 
 // Middleware-like function
-export async function checkApiKeyAuth(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
+export async function checkApiKeyAuth(req: Request, res: Response, next: NextFunction) {
     const APIToken = req.headers["x-api-token"] as string;
 
     try {
         if (!APIToken) {
-            throw new AppError(
-                "No API Token provided",
-                401,
-                "AUTH_NO_API_TOKEN"
-            );
+            throw new AppError("No API Token provided", 401, "AUTH_NO_API_TOKEN");
         }
 
         const tokenExists = await queryOne(
@@ -224,33 +197,19 @@ export async function deleteTokens(
 
     try {
         if (!token) {
-            throw new AppError(
-                "Token is required",
-                400,
-                "MISSING_FIELD",
-                "token"
-            );
+            throw new AppError("Token is required", 400, "MISSING_FIELD", "token");
         }
 
-        const resultQuery = await runSql(
-            "DELETE FROM apiToken WHERE token = ? ",
-            [token],
-            db
-        );
+        const resultQuery = await runSql("DELETE FROM apiToken WHERE token = ? ", [token], db);
 
         if (resultQuery > 0) {
             return res.status(200).json(
                 success({
-                    message:
-                        "Success! Token unlinked from your account and deleted from DB.",
+                    message: "Success! Token unlinked from your account and deleted from DB.",
                 })
             );
         } else {
-            throw new AppError(
-                "Nothing was changed (wrong API Key?)",
-                404,
-                "TOKEN_NOT_FOUND"
-            );
+            throw new AppError("Nothing was changed (wrong API Key?)", 404, "TOKEN_NOT_FOUND");
         }
     } catch (err) {
         next(err);
@@ -258,32 +217,13 @@ export async function deleteTokens(
 }
 
 export async function getApiGrades(
-    req: Request<{}, ApiResponse<any>, {}, GradesQuery>,
+    req: Request<{}, ApiResponse<any>, {}, QueryFilter>,
     res: Response,
     next: NextFunction
 ) {
     const apiToken = req.headers["x-api-token"] as string;
-    /**
-     * @param {number} year - se for null, futuramente, pretendo que ele não de problema e retorne todo o histórico escolar (bem viável mas extremamente pesado)
-     * @param {boolean} privateGrades - notas particulares do aluno, se true ele pega os objetos do usuário da função de scrapping
-     */
 
     try {
-        const { year, privateGrades } = req.query;
-        if (!apiToken)
-            throw new AppError("Missing API Token", 401, "AUTH_NO_API_TOKEN");
-        let yearNumber = 0;
-        if (year) {
-            yearNumber = Number(year);
-
-            if (isNaN(yearNumber) || !Number.isInteger(yearNumber))
-                throw new AppError(
-                    "Invalid 'year' parameter",
-                    400,
-                    "INVALID_PARAM",
-                    "year"
-                );
-        }
 
         // if (
         //     privateGrades &&
@@ -314,27 +254,21 @@ export async function getApiGrades(
         const { cookieString } = tokenData;
         const decryptedCookies = decrypt(cookieString);
 
-        const grades = await getGrades(decryptedCookies, apiToken, yearNumber);
-
+        const grades = await getGrades(decryptedCookies, apiToken);
+        const filteredGrades = filterQuery(grades, req.query);
         if (!grades) {
-            throw new AppError(
-                "Failed to retrieve grades from NSAC",
-                502,
-                "UPSTREAM_ERROR"
-            );
+            throw new AppError("Failed to retrieve grades from NSAC", 502, "UPSTREAM_ERROR");
         }
+        const { warning, userCurrentYear } = grades;
+
         let data = {
-            ...grades,
+            warning,
+            userCurrentYear,
+            filteredGrades,
         } as any;
 
         res.status(200).json(success(data));
     } catch (err: any) {
-        if (
-            err.message &&
-            err.message.includes("Invalid year URL parameter.")
-        ) {
-            return next(new AppError(err.message, 400, "INVALID_YEAR_PARAM"));
-        }
         next(err);
     }
 }

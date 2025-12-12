@@ -8,12 +8,16 @@ import {
     ResultData,
     YearInfo,
     BimesterData,
+    AllYearsInfo,
 } from "../types/index.js";
+import { AnyNode } from "domhandler";
+interface BasicYearInfo {
+    tittleLabel: string;
+    parsedYear: number;
+    parsedStatus: string;
+}
 
-function getSubjectName(
-    $: cheerio.CheerioAPI,
-    row: cheerio.BasicAcceptedElems<any>
-): string {
+function getSubjectName($: cheerio.CheerioAPI, row: cheerio.BasicAcceptedElems<any>): string {
     let schoolSubject: any = $(row).find("td:not(.text-center) span");
     const schoolSubjectAtrr = $(schoolSubject).attr("title");
     if (schoolSubjectAtrr) {
@@ -21,6 +25,42 @@ function getSubjectName(
     } else {
         return $(schoolSubject).text().trim();
     }
+}
+
+function getBasicYearInfo(
+    $: cheerio.CheerioAPI,
+    table: cheerio.BasicAcceptedElems<AnyNode>
+): BasicYearInfo {
+    const titlesString = $(table)
+        .find("div.box-header")
+        .find("h4")
+        .text()
+        .trim()
+        .replace(/\s/g, "")
+        .split("/");
+
+    let yearLabel = titlesString[1];
+    const tittleLabel = titlesString[0]!;
+
+    if (!yearLabel) {
+        throw new Error("Erro ao extrair ano do cabeçalho da tabela");
+    }
+
+    let status = yearLabel.split("-");
+    let parsedStatus: string;
+    if (status.length > 1) {
+        yearLabel = status[0];
+        parsedStatus = status[1]!;
+    } else {
+        parsedStatus = "Cursando.";
+    }
+
+    const parsedYear = Number(yearLabel);
+    return {
+        tittleLabel,
+        parsedYear,
+        parsedStatus,
+    };
 }
 
 function extractAndCleanGrade(pollutedString: string) {
@@ -35,12 +75,11 @@ function extractAndCleanGrade(pollutedString: string) {
     return null;
 }
 
-export async function getGrades(
-    logToken: string,
-    APIToken?: string,
-    year?: number
-) {
-    const tokenResult = await verifyCookie(logToken, APIToken);
+async function fetchBoletimDOM(
+    logToken: string, // Token de login
+    APIToken?: string // Token da API
+): Promise<cheerio.CheerioAPI> {
+    const tokenResult = await verifyCookie(logToken, APIToken); // Se o logToken for invalido mas o APIToken n, ent ele retorna um logToken novo
 
     const response = await fetch("http://200.145.153.1/nsac/aluno/boletim", {
         credentials: "include",
@@ -53,54 +92,31 @@ export async function getGrades(
     });
 
     const boletimHtml = await response.text();
-    const $ = cheerio.load(boletimHtml);
+    return cheerio.load(boletimHtml);
+}
 
-    const tables = $("div.box.box-primary").toArray();
-    const userCurrentYear = tables.length;
+export async function getGrades(logToken: string, APIToken?: string, year?: number): Promise<AllYearsInfo> {
     const MAX_BIMESTERS = 4;
+    const $ = await fetchBoletimDOM(logToken, APIToken);
 
-    if (year === 0) {
-        year++;
-    }
+    const tables = $("div.box.box-primary").toArray().reverse();
+    const userCurrentYear = tables.length;
+
+    if (year === 0) year = userCurrentYear;
 
     let warning: string | boolean = false;
     let allYearsInfo: YearInfo[] = [];
     tables.forEach((table) => {
-        const titlesString = $(table)
-            .find("div.box-header")
-            .find("h4")
-            .text()
-            .trim()
-            .replace(/\s/g, "")
-            .split("/");
-
-        let yearLabel = titlesString[1];
-        const tittleLabel = titlesString[0];
-
-        if (!yearLabel) {
-            throw new Error("Erro ao extrair ano do cabeçalho da tabela");
-        }
-
-        let status = yearLabel.split("-");
-        if (status.length > 1) {
-            yearLabel = status[0];
-        } else {
-            status[1] = "Cursando.";
-        }
-
-        const parsedYear = Number(yearLabel);
+        const { parsedYear, tittleLabel, parsedStatus } = getBasicYearInfo($, table);
 
         let fullGradesObj: FullGrades[] = [];
-        const bimesterAccumulators = Array.from(
-            { length: MAX_BIMESTERS },
-            () => ({
-                totalUserGrade: 0,
-                countUserGrades: 0,
-                totalClassGrade: 0,
-                countClassGrades: 0,
-                totalAbsences: 0,
-            })
-        );
+        const bimesterAccumulators = Array.from({ length: MAX_BIMESTERS }, () => ({
+            totalUserGrade: 0,
+            countUserGrades: 0,
+            totalClassGrade: 0,
+            countClassGrades: 0,
+            totalAbsences: 0,
+        }));
         $(table)
             .find("tr.linha")
             .each((_, row) => {
@@ -112,24 +128,22 @@ export async function getGrades(
                 };
 
                 let currentSubject: FullGrades = {
-                    gradeName: schoolSubject,
+                    subjectName: schoolSubject,
                     userGrades: [],
                     classGrades: [],
                     results: resultDataObj,
                 };
 
                 const cells = $(row).find("td.text-center");
-                const map: Record<number, string> = {
-                    0: "userGrade",
-                    1: "classGrade",
-                    2: "absences",
-                    3: "recoveryStatus",
-                };
+                const map: Array<string> = [
+                    "userGrade",
+                    "classGrade",
+                    "absences",
+                    "recoveryStatus",
+                ];
 
                 cells.each((cellIndex, cell) => {
-                    const currentBimester = Math.floor(
-                        cellIndex / MAX_BIMESTERS
-                    );
+                    const currentBimester = Math.floor(cellIndex / MAX_BIMESTERS);
 
                     if (cellIndex < 16) {
                         const cellType = map[cellIndex % MAX_BIMESTERS];
@@ -146,82 +160,59 @@ export async function getGrades(
                         }
                         if (!currentSubject.classGrades[currentBimester]) {
                             currentSubject.classGrades[currentBimester] = {
-                                avarageGrade: 0,
+                                averageGrade: 0,
                             };
                         }
 
                         switch (cellType) {
                             case "userGrade":
-                                const userGradeValue = extractAndCleanGrade(
-                                    $(cell).text()
-                                );
+                                const userGradeValue = extractAndCleanGrade($(cell).text());
                                 if (userGradeValue !== null) {
-                                    currentSubject.userGrades[
-                                        currentBimester
-                                    ].grade = userGradeValue;
-                                    bimesterAccumulators[
-                                        currentBimester
-                                    ]!.totalUserGrade += userGradeValue;
-                                    bimesterAccumulators[currentBimester]!
-                                        .countUserGrades++;
+                                    currentSubject.userGrades[currentBimester].grade =
+                                        userGradeValue;
+                                    bimesterAccumulators[currentBimester]!.totalUserGrade +=
+                                        userGradeValue;
+                                    bimesterAccumulators[currentBimester]!.countUserGrades++;
                                 }
                                 break;
 
                             case "classGrade":
-                                const classGradeValue = extractAndCleanGrade(
-                                    $(cell).text()
-                                );
+                                const classGradeValue = extractAndCleanGrade($(cell).text());
                                 if (classGradeValue !== null) {
-                                    currentSubject.classGrades[
-                                        currentBimester
-                                    ].avarageGrade = classGradeValue;
-                                    bimesterAccumulators[
-                                        currentBimester
-                                    ]!.totalClassGrade += classGradeValue;
-                                    bimesterAccumulators[currentBimester]!
-                                        .countClassGrades++;
+                                    currentSubject.classGrades[currentBimester].averageGrade =
+                                        classGradeValue;
+                                    bimesterAccumulators[currentBimester]!.totalClassGrade +=
+                                        classGradeValue;
+                                    bimesterAccumulators[currentBimester]!.countClassGrades++;
                                 }
                                 break;
 
                             case "absences":
                                 const absences = Number($(cell).text().trim());
                                 if (!isNaN(absences)) {
-                                    currentSubject.userGrades[
-                                        currentBimester
-                                    ].absences = absences;
-                                    bimesterAccumulators[
-                                        currentBimester
-                                    ]!.totalAbsences += absences;
+                                    currentSubject.userGrades[currentBimester].absences = absences;
+                                    bimesterAccumulators[currentBimester]!.totalAbsences +=
+                                        absences;
                                 }
                                 break;
 
                             case "recoveryStatus":
                                 const lastSpanChild = $(cell).children().last();
-                                const completeStatus =
-                                    $(lastSpanChild)
-                                        .attr("title")
-                                        ?.toString() || "Não aconteceu";
+                                const completeStatus = ($(lastSpanChild)
+                                    .attr("title")
+                                    ?.toString() || "Não aconteceu") as recoveryMessages;
                                 let statusCode = $(lastSpanChild).text().trim();
                                 if (statusCode === "-") statusCode = "NAC";
-                                const recoveryBool = [
-                                    "SAT",
-                                    "INS",
-                                    "NC",
-                                ].includes(statusCode);
-                                let currentUserGrades =
-                                    currentSubject.userGrades[currentBimester];
+                                const recoveryBool = ["SAT", "INS", "NC"].includes(statusCode);
+                                let currentUserGrades = currentSubject.userGrades[currentBimester];
                                 if (recoveryBool) {
-                                    currentSubject.userGrades[currentBimester] =
-                                        {
-                                            ...currentUserGrades,
-                                            recovery: recoveryBool,
-                                            recovered:
-                                                currentUserGrades.grade >= 6,
-                                            recoveryCode:
-                                                statusCode as recoveryStatusCode,
-                                            recoveryMessage:
-                                                completeStatus as recoveryMessages,
-                                        };
+                                    currentSubject.userGrades[currentBimester] = {
+                                        ...currentUserGrades,
+                                        recovery: recoveryBool,
+                                        recovered: currentUserGrades.grade >= 6,
+                                        recoveryCode: statusCode as recoveryStatusCode,
+                                        recoveryMessage: completeStatus,
+                                    };
                                 } else {
                                     const {
                                         recovered,
@@ -229,28 +220,22 @@ export async function getGrades(
                                         recoveryMessage,
                                         ...cleanGrades
                                     } = currentUserGrades;
-                                    currentSubject.userGrades[currentBimester] =
-                                        {
-                                            ...cleanGrades,
-                                            recovery: false,
-                                        };
+                                    currentSubject.userGrades[currentBimester] = {
+                                        ...cleanGrades,
+                                        recovery: false,
+                                    };
                                 }
                                 break;
                         }
                     } else {
                         if (cellIndex == 16) {
-                            const finalGrade = extractAndCleanGrade(
-                                $(cell).text()
-                            );
-                            if (finalGrade === null)
-                                throw new Error("INVALID FINAL GRADE!");
+                            const finalGrade = extractAndCleanGrade($(cell).text());
+                            if (finalGrade === null) throw new Error("INVALID FINAL GRADE!");
                             resultDataObj.grade = finalGrade;
                         } else if (cellIndex == 17) {
                             const totalAbsences = Number($(cell).text().trim());
                             if (isNaN(totalAbsences))
-                                throw new Error(
-                                    "INVALID FINAL ABSENCES GRADE!"
-                                );
+                                throw new Error("INVALID FINAL ABSENCES GRADE!");
                             resultDataObj.totalAbsences = totalAbsences;
                         }
                     }
@@ -259,66 +244,28 @@ export async function getGrades(
                 fullGradesObj.push(currentSubject);
             });
 
-        const calculatedBimesterData: BimesterData[] = bimesterAccumulators.map(
-            (acc) => ({
-                userAvarage:
-                    acc.countUserGrades > 0
-                        ? Number(
-                              (
-                                  acc.totalUserGrade / acc.countUserGrades
-                              ).toFixed(2)
-                          )
-                        : 0,
-                classAvarage:
-                    acc.countClassGrades > 0
-                        ? Number(
-                              (
-                                  acc.totalClassGrade / acc.countClassGrades
-                              ).toFixed(2)
-                          )
-                        : 0,
-                totalAbsences: acc.totalAbsences,
-            })
-        );
+        const calculatedBimesterData: BimesterData[] = bimesterAccumulators.map((acc) => ({
+            userAverage:
+                acc.countUserGrades > 0
+                    ? Number((acc.totalUserGrade / acc.countUserGrades).toFixed(2))
+                    : 0,
+            classAverage:
+                acc.countClassGrades > 0
+                    ? Number((acc.totalClassGrade / acc.countClassGrades).toFixed(2))
+                    : 0,
+            totalAbsences: acc.totalAbsences,
+        }));
 
         const resultYearInfo: YearInfo = {
             tittle: tittleLabel!,
             year: parsedYear,
-            status: status[1]!,
+            status: parsedStatus,
             grades: fullGradesObj,
             bimestersData: calculatedBimesterData,
         };
 
         allYearsInfo.push(resultYearInfo);
     });
-
-    if (year) {
-        if (year > userCurrentYear) {
-            year = userCurrentYear;
-        }
-        if (year < 0) {
-            console.log({ year, userCurrentYear });
-            year = (year + userCurrentYear) * -1; // segundo ano: -1 => 1; -2 => 0 => 1
-            console.log({ year, userCurrentYear });
-        }
-        if (year === 0) year++;
-        const yearIndex = userCurrentYear - year; // pra pegar o index: o ano que ele tá - ano q ele quer ; ex, segundo ano: 2-2=0, 2-1=1
-        const filteredYear = allYearsInfo[yearIndex];
-        const tittle = filteredYear!.tittle;
-        console.log({
-            year,
-            yearIndex,
-            tittle,
-        });
-        if (!filteredYear) {
-            throw new AppError("Year not found", 404, "YEAR_NOT_FOUND");
-        }
-        return {
-            warning,
-            userCurrentYear,
-            data: filteredYear,
-        };
-    }
 
     return {
         warning,

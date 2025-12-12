@@ -1,4 +1,4 @@
-import e, { Express } from "express";
+import e from "express";
 import "dotenv/config";
 import { ensureDbCreated } from "./utils/database.js";
 (async () => {
@@ -9,12 +9,12 @@ import nsacRoutes from "./routes/v1/nsacRoutes.js";
 import cors from "cors";
 import { globalErrorHandling } from "./utils/errorHandler.js";
 
-const app: Express = e();
+const app = e();
 
-
+app.set("query parser", "extended");
 app.use(e.json());
+app.use(e.urlencoded({ extended: true })); 
 app.use(cors());
-app.use(e.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 3000;
 
