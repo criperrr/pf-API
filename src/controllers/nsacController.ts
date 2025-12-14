@@ -18,7 +18,7 @@ import {
     QueryFilter,
 } from "../types/index.js";
 import { success } from "../utils/responseHelpers.js";
-import { AppError, MultiAppErrors } from "../types/ApiError.js";
+import { AppError } from "../types/ApiError.js";
 import { filterQuery } from "../utils/gradesFilter.js";
 
 interface JwtTokenPayload {
@@ -34,7 +34,7 @@ export async function createToken(
     try {
         const { email, password } = req.body;
 
-        // acho que é impossível chegar aq mas pro typescript n encher o saco é isso ai
+        // acho que é impossível chegar aq por causa dos middlewares mas pro typescript n encher o saco é isso ai
         if (!req.headers.authorization) {
             throw new AppError("No Authorization header", 401, "AUTH_HEADER_MISSING");
         }
@@ -53,15 +53,7 @@ export async function createToken(
 
         const userId = payload.id_User;
 
-        const emptyFields = verifyEmptyFields({ email, password, userId });
-        if (emptyFields.length !== 0) {
-            const errors = emptyFields.map((field) => ({
-                field: field,
-                message: `Empty field ${field}`,
-                code: "AUTH_MISSING_FIELD",
-            }));
-            throw new MultiAppErrors(errors);
-        }
+        verifyEmptyFields({ email, password, userId });
 
         const loginNsac = await login(email, password);
 
@@ -224,7 +216,6 @@ export async function getApiGrades(
     const apiToken = req.headers["x-api-token"] as string;
 
     try {
-
         // if (
         //     privateGrades &&
         //     privateGrades != "false" &&

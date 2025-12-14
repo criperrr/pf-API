@@ -1,5 +1,5 @@
 import { newUser, User } from "../models/index.js";
-import db, { queryOne, runSql } from "../utils/database.js";
+import db, { getSql, queryOne, runSql } from "../utils/database.js";
 import verifyEmptyFields from "../utils/emptyFields.js";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -26,27 +26,13 @@ export async function register(
 ) {
     const { name, email, password }: newUser = req.body;
 
-    const emptyFields = verifyEmptyFields({ name, email, password });
-    if (emptyFields.length != 0) {
-        const errors = emptyFields.map((field) => ({
-            field: field,
-            message: `Empty field ${field}`,
-            code: "REG_MISSING_FIELD",
-        }));
-        throw new MultiAppErrors(errors, 400);
-    }
-
-    const emailRegex = /[^\s@]+@+[^\s@]+\.+[^\s@]/;
-    if (!emailRegex.test(email)) {
-        throw new AppError(
-            "Invalid email",
-            400,
-            "REG_INVALID_EMAIL_FORMAT",
-            "email"
-        );
-    }
-
     try {
+        verifyEmptyFields({ name, email, password });
+
+        const emailRegex = /[^\s@]+@+[^\s@]+\.+[^\s@]/;
+        if (!emailRegex.test(email)) {
+            throw new AppError("Invalid email", 400, "REG_INVALID_EMAIL_FORMAT", "email");
+        }
         const emailExists: User = await queryOne<User>(
             "SELECT id_User FROM User WHERE email = ?",
             [email],
@@ -80,33 +66,21 @@ export async function register(
         }
 
         console.error("Error during registration:", err);
-        next(err)
+        next(err);
     }
 }
 
 export async function login(req: Request, res: Response, next: NextFunction) {
     const { email, password }: User = req.body;
 
-    const emptyFields = verifyEmptyFields({ email, password });
-
-    if (emptyFields.length != 0) {
-        const errors = emptyFields.map((field) => ({
-            field: field,
-            message: `Empty field ${field}`,
-            code: "REG_MISSING_FIELD",
-        }));
-        throw new MultiAppErrors(errors, 400)
-    }
     try {
-        const { id_User, passwordHash }: User =
-            (await queryOne<User>(
-                "SELECT id_User, passwordHash FROM User WHERE email = ?",
-                [email],
-                db
-            )) ?? ({ id_User: null, passwordHash: null });
-        const passMatch = id_User
-            ? await bcrypt.compare(password, passwordHash)
-            : false;
+        verifyEmptyFields({ email, password });
+        const { id_User, passwordHash }: User = (await queryOne<User>(
+            "SELECT id_User, passwordHash FROM User WHERE email = ?",
+            [email],
+            db
+        )) ?? { id_User: null, passwordHash: null };
+        const passMatch = id_User ? await bcrypt.compare(password, passwordHash) : false;
 
         if (!id_User || !passMatch) {
             throw new AppError("Invalid email or password", 401, "AUTH_INVALID_CREDENTIALS");
@@ -135,6 +109,24 @@ export async function login(req: Request, res: Response, next: NextFunction) {
             .status(200)
             .json(success(successData));
     } catch (err: any) {
-        next(err)
+        next(err);
+    }
+}
+
+export async function createMasterToken(req: Request, res: Response, next: NextFunction) {
+    // passes jwt middleware
+    const { email }: User = req.body;
+
+    try {
+        verifyEmptyFields({ email });
+        const { masterToken } = (await queryOne<User>(
+            "SELECT masterToken FROM User WHERE ",
+            [],
+            db
+        )) ?? {
+            masterToken: null,
+        };
+    } catch (err: any) {
+        next(err);
     }
 }

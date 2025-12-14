@@ -13,7 +13,7 @@ const app = e();
 
 app.set("query parser", "extended");
 app.use(e.json());
-app.use(e.urlencoded({ extended: true })); 
+app.use(e.urlencoded({ extended: true }));
 app.use(cors());
 
 const port = process.env.PORT || 3000;

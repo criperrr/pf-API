@@ -17,5 +17,4 @@ router.delete("/accounts", nsacController.deleteTokens);
 
 router.get("/grades", nsacController.getApiGrades);
 
-
 export default router;

@@ -3,7 +3,7 @@ import sqlite3 from "sqlite3";
 const databaseLocation = ":memory:";
 const mongoDbUri = process.env.MONGODBURI;
 
-if(!mongoDbUri) process.exit(1);
+if (!mongoDbUri) process.exit(1);
 
 const client = new MongoClient(mongoDbUri, {
     serverApi: {

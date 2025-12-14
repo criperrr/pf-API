@@ -6,13 +6,13 @@ export interface ApiError {
     field?: string;
 }
 
-interface ApiSucess<T = any> {
+export interface ApiSucess<T = any> {
     success: true;
     data: T;
     errors?: never;
 }
 
-interface ApiFailure {
+export interface ApiFailure {
     success: false;
     data?: never;
     errors: Array<ApiError>;
@@ -96,20 +96,15 @@ export type FilterBuilder<T> = {
 
 // --- Query  ---
 export interface Query {
-    // Contexto Geral
-    schoolYear?: number; // Ex: "2"
-    subjectName?: string; // Ex: "Matemática", "Mat"
-
-    // Contexto Bimestral
-    targetBimester?: number; // 1, 2, 3, 4
-
-    // Valores
-    grade?: number; // se targetBimester n for undefined, ele busca pelo filtro da nota dentro daquele bimestre
-    classAverage?: number;
-
-    // Status
-    isRecovery?: boolean; // Se ficou de recuperação
-    recoveryCode?: string; // Ex: "SAT"
+    //                                                ▲
+    schoolYear?: number; // Ex: "2"                   | mais abrangente
+    targetBimester?: number; // 1, 2, 3, 4            |
+    subjectName?: string; // Ex: "Matemática", "Mat"  |
+    isRecovery?: boolean; // Se ficou de recuperação  |
+    recoveryCode?: string; // Ex: "SAT"               |
+    grade?: number; // Nota do aluno                  |
+    classAverage?: number; // Média da turma          | menos abrangente (n necessariamente é menos abrangente).
+    //                                                ▼
 }
 
 export interface QueryFilter extends FilterBuilder<Query> {}

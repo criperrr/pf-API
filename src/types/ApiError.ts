@@ -5,12 +5,7 @@ export class AppError extends Error {
     public readonly field?: string | undefined;
     public readonly errorCode: string;
 
-    constructor(
-        message: string,
-        HTTPCode: number,
-        errorCode: string,
-        field?: string,
-    ) {
+    constructor(message: string, HTTPCode: number, errorCode: string, field?: string) {
         super(message);
         this.HTTPCode = HTTPCode;
         this.field = field;

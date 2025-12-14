@@ -8,12 +8,6 @@ export function success<T = any>(data: T): ApiSucess<T> {
     return { success: true, data };
 }
 
-export function singleError(
-    message: string,
-    code: string,
-    field?: string
-): ApiFailure {
-    return field
-        ? failure([{ message, code, field }])
-        : failure([{ message, code }]);
+export function singleError(message: string, code: string, field?: string): ApiFailure {
+    return field ? failure([{ message, code, field }]) : failure([{ message, code }]);
 }

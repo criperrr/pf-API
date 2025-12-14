@@ -40,9 +40,7 @@ export function decrypt(message: string): string {
         decrypted += decipher.final("utf8");
     } catch (error) {
         console.error("Decryption failed:", error);
-        throw new Error(
-            "Decryption failed due to invalid key, IV, or corrupted data."
-        );
+        throw new Error("Decryption failed due to invalid key, IV, or corrupted data.");
     }
 
     return decrypted;

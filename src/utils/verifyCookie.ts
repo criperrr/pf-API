@@ -4,10 +4,7 @@ import { decrypt, encrypt } from "./crypto.js";
 import db, { queryOne, runSql } from "./database.js";
 import { login } from "./loginNsac.js";
 
-export async function verifyCookie(
-    token: string,
-    APIToken?: string
-): Promise<string> {
+export async function verifyCookie(token: string, APIToken?: string): Promise<string> {
     const responseTest = await fetch("http://200.145.153.1/nsac/home", {
         credentials: "include",
         headers: {
@@ -38,10 +35,7 @@ export async function verifyCookie(
 
                 const decryptedPassword = decrypt(accountData.password);
 
-                const newCookie = (await login(
-                    accountData.email,
-                    decryptedPassword
-                )) as string;
+                const newCookie = (await login(accountData.email, decryptedPassword)) as string;
 
                 const encryptedNewCookie = encrypt(newCookie);
 
@@ -55,18 +49,10 @@ export async function verifyCookie(
             } catch (err) {
                 console.error("Erro ao renovar cookie:");
                 console.log(err);
-                
-                throw new AppError(
-                    "Failed to refresh session",
-                    500,
-                    "SESSION_REFRESH_ERROR"
-                );
+
+                throw new AppError("Failed to refresh session", 500, "SESSION_REFRESH_ERROR");
             }
         }
-        throw new AppError(
-            "Invalid cookie and no APIToken provided",
-            401,
-            "NSAC_AUTH_EXPIRED"
-        );
+        throw new AppError("Invalid cookie and no APIToken provided", 401, "NSAC_AUTH_EXPIRED");
     }
 }
