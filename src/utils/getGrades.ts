@@ -9,6 +9,9 @@ import {
     YearInfo,
     BimesterData,
     AllYearsInfo,
+    UnifiedBimesterData,
+    PersonalBiInformation,
+    ClassBiInformation,
 } from "../types/index.js";
 import { AnyNode } from "domhandler";
 interface BasicYearInfo {
@@ -95,7 +98,11 @@ async function fetchBoletimDOM(
     return cheerio.load(boletimHtml);
 }
 
-export async function getGrades(logToken: string, APIToken?: string, year?: number): Promise<AllYearsInfo> {
+export async function getGrades(
+    logToken: string,
+    APIToken?: string,
+    year?: number
+): Promise<AllYearsInfo> {
     const MAX_BIMESTERS = 4;
     const $ = await fetchBoletimDOM(logToken, APIToken);
 
@@ -120,6 +127,7 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
         $(table)
             .find("tr.linha")
             .each((_, row) => {
+                let bimesterObj: Array<UnifiedBimesterData> = [];
                 const schoolSubject = getSubjectName($, row);
 
                 let resultDataObj: ResultData = {
@@ -127,11 +135,17 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                     totalAbsences: 0,
                 };
 
-                let currentSubject: FullGrades = {
-                    subjectName: schoolSubject,
-                    userGrades: [],
-                    classGrades: [],
-                    results: resultDataObj,
+                let personalResults: PersonalBiInformation = {
+                    grade: 0,
+                    recovered: false,
+                    recovery: false,
+                    recoveryCode: "NAC",
+                    recoveryMessage: "Não aconteceu",
+                    absences: 0,
+                };
+
+                let classResults: ClassBiInformation = {
+                    averageGrade: 0,
                 };
 
                 const cells = $(row).find("td.text-center");
@@ -144,32 +158,21 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
 
                 cells.each((cellIndex, cell) => {
                     const currentBimester = Math.floor(cellIndex / MAX_BIMESTERS);
-
+                    const cellType = map[cellIndex % MAX_BIMESTERS];
                     if (cellIndex < 16) {
-                        const cellType = map[cellIndex % MAX_BIMESTERS];
-
-                        if (!currentSubject.userGrades[currentBimester]) {
-                            currentSubject.userGrades[currentBimester] = {
-                                grade: 0,
-                                recovered: false,
-                                recovery: false,
-                                recoveryCode: "NAC",
-                                recoveryMessage: "Não aconteceu",
-                                absences: 0,
-                            };
+                        if ((cellIndex + 1) % MAX_BIMESTERS === 0) {
+                            // 4, 8, 12, 16 (bimestres 1, 2, 3, 4)
+                            bimesterObj.push({
+                                bimester: currentBimester + 1,
+                                personal: personalResults,
+                                class: classResults,
+                            });
                         }
-                        if (!currentSubject.classGrades[currentBimester]) {
-                            currentSubject.classGrades[currentBimester] = {
-                                averageGrade: 0,
-                            };
-                        }
-
                         switch (cellType) {
                             case "userGrade":
                                 const userGradeValue = extractAndCleanGrade($(cell).text());
                                 if (userGradeValue !== null) {
-                                    currentSubject.userGrades[currentBimester].grade =
-                                        userGradeValue;
+                                    personalResults.grade = userGradeValue;
                                     bimesterAccumulators[currentBimester]!.totalUserGrade +=
                                         userGradeValue;
                                     bimesterAccumulators[currentBimester]!.countUserGrades++;
@@ -179,8 +182,7 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                             case "classGrade":
                                 const classGradeValue = extractAndCleanGrade($(cell).text());
                                 if (classGradeValue !== null) {
-                                    currentSubject.classGrades[currentBimester].averageGrade =
-                                        classGradeValue;
+                                    classResults.averageGrade = classGradeValue;
                                     bimesterAccumulators[currentBimester]!.totalClassGrade +=
                                         classGradeValue;
                                     bimesterAccumulators[currentBimester]!.countClassGrades++;
@@ -190,7 +192,7 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                             case "absences":
                                 const absences = Number($(cell).text().trim());
                                 if (!isNaN(absences)) {
-                                    currentSubject.userGrades[currentBimester].absences = absences;
+                                    personalResults.absences = absences;
                                     bimesterAccumulators[currentBimester]!.totalAbsences +=
                                         absences;
                                 }
@@ -204,12 +206,11 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                                 let statusCode = $(lastSpanChild).text().trim();
                                 if (statusCode === "-") statusCode = "NAC";
                                 const recoveryBool = ["SAT", "INS", "NC"].includes(statusCode);
-                                let currentUserGrades = currentSubject.userGrades[currentBimester];
                                 if (recoveryBool) {
-                                    currentSubject.userGrades[currentBimester] = {
-                                        ...currentUserGrades,
+                                    personalResults = {
+                                        ...personalResults,
                                         recovery: recoveryBool,
-                                        recovered: currentUserGrades.grade >= 6,
+                                        recovered: personalResults.grade >= 6,
                                         recoveryCode: statusCode as recoveryStatusCode,
                                         recoveryMessage: completeStatus,
                                     };
@@ -219,8 +220,8 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                                         recoveryCode,
                                         recoveryMessage,
                                         ...cleanGrades
-                                    } = currentUserGrades;
-                                    currentSubject.userGrades[currentBimester] = {
+                                    } = personalResults;
+                                    personalResults = {
                                         ...cleanGrades,
                                         recovery: false,
                                     };
@@ -240,6 +241,11 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
                         }
                     }
                 });
+                const currentSubject: FullGrades = {
+                    subjectName: schoolSubject,
+                    results: resultDataObj,
+                    bimesters: bimesterObj,
+                };
 
                 fullGradesObj.push(currentSubject);
             });
@@ -261,7 +267,7 @@ export async function getGrades(logToken: string, APIToken?: string, year?: numb
             year: parsedYear,
             status: parsedStatus,
             grades: fullGradesObj,
-            bimestersData: calculatedBimesterData,
+            bimestersMetrics: calculatedBimesterData,
         };
 
         allYearsInfo.push(resultYearInfo);

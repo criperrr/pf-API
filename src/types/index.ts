@@ -133,7 +133,7 @@ export interface YearInfo {
     year: number;
     status: string;
     grades: Array<FullGrades>;
-    bimestersData: Array<BimesterData>;
+    bimestersMetrics: Array<BimesterData>;
 }
 
 export interface ResultData {
@@ -144,9 +144,14 @@ export interface ResultData {
 export interface FullGrades {
     // uma row da tabela
     subjectName: string;
-    userGrades: Array<PersonalBiInformation>;
-    classGrades: Array<ClassBiInformation>;
     results: ResultData;
+    bimesters: Array<UnifiedBimesterData>;
+}
+
+export interface UnifiedBimesterData {
+    bimester: number; // 1, 2, 3, 4
+    personal: PersonalBiInformation;
+    class: ClassBiInformation;
 }
 
 export interface BimesterData {

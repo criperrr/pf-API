@@ -1,18 +1,28 @@
 import { AppError } from "../types/ApiError.js";
 import { AllYearsInfo, NumberFilter, QueryFilter, YearInfo } from "../types/index.js";
 
-
-
 function checkNumberFilters(value: number, filters: NumberFilter | number): boolean {
-    console.log(filters);
     (Object.keys(filters) as (keyof NumberFilter)[]).forEach((key) => {
         if (typeof filters === "object" && filters !== null) {
-            filters[key] = Number(filters[key]);
-            if (Number.isNaN(filters[key]))
-                throw new AppError("Invalid input parameters", 400, "INVALID_PARAMS");
+            console.log(filters);
+            if (Array.isArray(filters[key])) {
+                filters[key] = (filters[key] as unknown as number[]).map((filter) => {
+                    const numberValue = Number(filter);
+                    if (Number.isNaN(numberValue))
+                        throw new AppError("Invalid input parameters", 400, "INVALID_PARAMS");
+                    return numberValue;
+                }) as unknown as number;
+            } else {
+                filters[key] = Number(filters[key]);
+                if (Number.isNaN(filters[key])) {
+                    console.log(filters);
+                    throw new AppError("Invalid input parameters", 400, "INVALID_PARAMS");
+                }
+            }
         }
     });
-    if (!(Object.values(filters).some(val => Array.isArray(val)))) return numericFilter(value, filters);
+    if (!Object.values(filters).some((val) => Array.isArray(val)))
+        return numericFilter(value, filters);
     return Object.values(filters).some((filter) => numericFilter(value, filter));
 }
 
@@ -20,7 +30,6 @@ function numericFilter(value: number, filter: NumberFilter | number): boolean {
     if (typeof filter === "number") {
         return value === filter;
     }
-    console.log({ value, filter });
     if (filter.eq !== undefined && value !== filter.eq) {
         console.log("eq");
         return false;
@@ -44,11 +53,14 @@ export function filterQuery(grades: AllYearsInfo, query: QueryFilter): AllYearsI
     if (query.schoolYear !== undefined) {
         const yearFilter = query.schoolYear as NumberFilter | number;
         filteredData = filteredData.filter((yearInfo, i) => {
+            console.log(i + 1, yearFilter);
             return checkNumberFilters(i + 1, yearFilter);
         });
     }
-    console.log(query);
-    console.log(filteredData);
+    if (query.targetBimester !== undefined) {
+        const bimesterFilter = query.targetBimester as NumberFilter | number;
+        filteredData.forEach((yearInfo, _) => {});
+    }
     return {
         ...grades,
         data: filteredData,

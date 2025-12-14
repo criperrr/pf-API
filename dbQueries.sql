@@ -2,7 +2,8 @@ CREATE TABLE User (
     id_User INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    passwordHash TEXT NOT NULL
+    passwordHash TEXT NOT NULL,
+    masterToken TEXT UNIQUE,
 );
 
 CREATE TABLE NsacAccount (
