@@ -1,5 +1,5 @@
-import { newUser, User } from "../models/index.js";
-import db, { getSql, queryOne, runSql } from "../utils/database.js";
+import { newUser, Users } from "../models/index.js";
+import db, { queryOne, runSql } from "../utils/database.js";
 import verifyEmptyFields from "../utils/emptyFields.js";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -11,7 +11,13 @@ import {
     RegisterDataResponse,
 } from "../types/index.js";
 import { success } from "../utils/responseHelpers.js";
-import { AppError, MultiAppErrors } from "../types/ApiError.js";
+import { AppError } from "../types/ApiError.js";
+import { generateRandomString } from "../utils/crypto.js";
+
+interface JwtTokenPayload {
+    id_User: string;
+    email: string;
+}
 
 const secretKey: any = process.env.SECRETKEY;
 if (!secretKey) {
@@ -33,30 +39,12 @@ export async function register(
         if (!emailRegex.test(email)) {
             throw new AppError("Invalid email", 400, "REG_INVALID_EMAIL_FORMAT", "email");
         }
-        const emailExists: User = await queryOne<User>(
-            "SELECT id_User FROM User WHERE email = ?",
+        const emailExists: Users = await queryOne<Users>(
+            "SELECT id_User FROM Users WHERE email = ?",
             [email],
             db
         );
         if (emailExists && emailExists.id_User) {
-            throw new Error("User.email: UNIQUE constraint failed");
-        }
-
-        const passHash = await bcrypt.hash(password, 8);
-
-        const lastID = await runSql(
-            "INSERT INTO User(name, email, passwordHash) VALUES (?, ?, ?)",
-            [name, email, passHash],
-            db
-        );
-
-        const data: RegisterDataResponse = {
-            message: "User created successfully!",
-            userId: lastID,
-        };
-        return res.status(201).json(success(data));
-    } catch (err: any) {
-        if (err.message.includes("UNIQUE constraint failed")) {
             throw new AppError(
                 "This email is already registered.",
                 409,
@@ -65,18 +53,32 @@ export async function register(
             );
         }
 
+        const passHash = await bcrypt.hash(password, 8);
+
+        const lastID = await runSql(
+            "INSERT INTO Users(name, email, passwordHash) VALUES (?, ?, ?) RETURNING id_User",
+            [name, email, passHash],
+            db
+        );
+
+        const data: RegisterDataResponse = {
+            message: "Users created successfully!",
+            userId: lastID,
+        };
+        return res.status(201).json(success(data));
+    } catch (err: any) {
         console.error("Error during registration:", err);
         next(err);
     }
 }
 
 export async function login(req: Request, res: Response, next: NextFunction) {
-    const { email, password }: User = req.body;
+    const { email, password }: Users = req.body;
 
     try {
         verifyEmptyFields({ email, password });
-        const { id_User, passwordHash }: User = (await queryOne<User>(
-            "SELECT id_User, passwordHash FROM User WHERE email = ?",
+        const { id_User, passwordHash }: Users = (await queryOne<Users>(
+            "SELECT id_User, passwordHash FROM Users WHERE email = ?",
             [email],
             db
         )) ?? { id_User: null, passwordHash: null };
@@ -97,7 +99,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
                 issuer: "Vitinho", // desculpa vitinho :)
             }
         );
-        console.log("User with email " + email + " logged in.");
+        console.log("Users with email " + email + " logged in.");
 
         const successData: LoginDataResponse = {
             message: "Logged succesfully",
@@ -115,17 +117,54 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
 export async function createMasterToken(req: Request, res: Response, next: NextFunction) {
     // passes jwt middleware
-    const { email }: User = req.body;
 
     try {
-        verifyEmptyFields({ email });
-        const { masterToken } = (await queryOne<User>(
-            "SELECT masterToken FROM User WHERE ",
-            [],
+        const jwtToken = req.headers.authorization!.split(" ")[1];
+
+        if (!jwtToken) {
+            throw new AppError("Invalid JWT token format.", 401, "AUTH_INVALID_PAYLOAD");
+        }
+
+        const payload = jwt.decode(jwtToken) as JwtTokenPayload;
+
+        if (!payload || !payload.id_User) {
+            throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
+        }
+
+        const userId = payload.id_User;
+        verifyEmptyFields({ userId });
+
+        let { masterToken } = (await queryOne<Users>(
+            "SELECT masterToken FROM Users WHERE id_User = ?",
+            [userId],
             db
         )) ?? {
             masterToken: null,
         };
+
+        if (masterToken !== null) {
+            return res.status(200).json(
+                success({
+                    message: "Already have a token, returning it",
+                    masterToken: masterToken,
+                })
+            );
+        }
+
+        masterToken = generateRandomString(30);
+        const lastID = await runSql(
+            "UPDATE Users SET masterToken = ? WHERE id_User = ?",
+            [masterToken, userId],
+            db
+        );
+
+        if (!lastID) throw new Error("Failed to update database while creating masterToken.");
+        return res.status(200).json(
+            success({
+                message: "Token created successfully",
+                masterToken: masterToken,
+            })
+        );
     } catch (err: any) {
         next(err);
     }

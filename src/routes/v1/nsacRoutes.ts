@@ -1,13 +1,13 @@
 import { Router } from "express";
 import * as nsacController from "../../controllers/nsacController.js";
-import { checkJwtAuth } from "../../middlewares/checkJwtAuth.js";
+import { checkAuth } from "../../middlewares/checkAuth.js";
 import { checkApiKeyAuth } from "../../middlewares/checkNsacToken.js";
 import { checkBody } from "../../middlewares/checkBody.js";
 const router = Router();
 
 router.get("/accounts/token-status", nsacController.checkApiKeyAuth);
 
-router.use("/accounts", checkJwtAuth);
+router.use("/accounts", checkAuth);
 router.use("/accounts", checkBody);
 router.use("/grades", checkApiKeyAuth);
 

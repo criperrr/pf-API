@@ -1,30 +1,37 @@
-import { MongoClient, ServerApiVersion } from "mongodb";
-import sqlite3 from "sqlite3";
-const databaseLocation = ":memory:";
-const mongoDbUri = process.env.MONGODBURI;
+import { Pool } from "pg";
+import "dotenv/config";
 
-if (!mongoDbUri) process.exit(1);
+const connectionString = process.env.SUPACONN;
 
-const client = new MongoClient(mongoDbUri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
+if (!connectionString) {
+    console.error("FATAL ERROR: SUPACONN is not defined in .env");
+    process.exit(1);
+}
+
+const db = new Pool({
+    connectionString,
+    ssl: {
+        rejectUnauthorized: false,
     },
 });
 
+db.on("connect", () => {
+    console.log("Connected to Supabase Postgres!");
+});
+
 const createUserTable = `
-CREATE TABLE IF NOT EXISTS User (
-    id_User INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS Users (
+    id_User SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    passwordHash TEXT NOT NULL
+    passwordHash TEXT NOT NULL,
+    masterToken TEXT UNIQUE
 );
 `;
 
 const createNsacAccountTable = `
 CREATE TABLE IF NOT EXISTS NsacAccount (
-    id_NsacAccount INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_NsacAccount SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
@@ -32,77 +39,65 @@ CREATE TABLE IF NOT EXISTS NsacAccount (
 
 const createApiTokenTable = `
 CREATE TABLE IF NOT EXISTS ApiToken (
-    id_Token INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_Token SERIAL PRIMARY KEY,
     id_User INTEGER NOT NULL,
     id_NsacAccount INTEGER NOT NULL,
     cookieString TEXT,
     token TEXT UNIQUE NOT NULL,
-    FOREIGN KEY (id_User) REFERENCES User (id_User) ON DELETE CASCADE,
+    FOREIGN KEY (id_User) REFERENCES Users (id_User) ON DELETE CASCADE,
     FOREIGN KEY (id_NsacAccount) REFERENCES NsacAccount (id_NsacAccount) ON DELETE CASCADE
 );
 `;
 
-const db = new sqlite3.Database(databaseLocation, (err) => {
-    if (err) throw new Error("Failed to connect to db: " + err);
-    console.log("Connected!");
-});
-
 export async function ensureDbCreated() {
-    await runSql(createUserTable, [], db);
-    await runSql(createNsacAccountTable, [], db);
-    await runSql(createApiTokenTable, [], db);
+    const client = await db.connect();
+    try {
+        await client.query(createUserTable);
+        await client.query(createNsacAccountTable);
+        await client.query(createApiTokenTable);
+        console.log("Tables ensured.");
+    } catch (err) {
+        console.error("Error creating tables:", err);
+    } finally {
+        client.release();
+    }
 }
 
-export async function runSql(
-    sql: string,
-    params: Array<string>,
-    connection: sqlite3.Database
-): Promise<number> {
-    return new Promise<number>((resolve, reject) => {
-        connection.run(sql, params, function (err: any) {
-            if (err) return reject(err);
-            resolve(this.changes);
-        });
-    });
-}
-
-export async function queryOne<T>(
-    sql: string,
-    params: Array<string>,
-    connection: sqlite3.Database
-): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-        connection.get(sql, params, (err, row: T | undefined) => {
-            if (err) return reject(err);
-            resolve(row as T);
-        });
-    });
-}
-
-export async function insertSql(
-    sql: string,
-    params: Array<any>,
-    connection: sqlite3.Database
-): Promise<number> {
-    return new Promise<number>((resolve, reject) => {
-        connection.run(sql, params, function (err: any) {
-            if (err) return reject(err);
-            resolve(this.lastID);
-        });
-    });
-}
-
-export async function getSql<T>(
-    sql: string,
-    params: Array<string>,
-    connection: sqlite3.Database
-): Promise<T[]> {
-    return new Promise<T[]>((resolve, reject) => {
-        connection.all(sql, params, (err, rows: T[] | undefined) => {
-            if (err) return reject(err);
-            resolve(rows as T[]);
-        });
-    });
+// preguiça de mudar o projeto inteiro
+function normalizeSql(sql: string): string {
+    let i = 1;
+    return sql.replace(/\?/g, () => `$${i++}`);
 }
 
 export default db;
+
+export async function runSql(sql: string, params: Array<any>, pool: Pool = db): Promise<number> {
+    const pgSql = normalizeSql(sql);
+    const result = await pool.query(pgSql, params);
+    return result.rowCount ?? 0;
+}
+
+export async function queryOne<T>(sql: string, params: Array<any>, pool: Pool = db): Promise<T> {
+    const pgSql = normalizeSql(sql);
+    const result = await pool.query(pgSql, params);
+    return result.rows[0] as T;
+}
+
+export async function insertSql(sql: string, params: Array<any>, pool: Pool = db): Promise<number> {
+    const pgSql = normalizeSql(sql);
+
+    const result = await pool.query(pgSql, params);
+
+    if (result.rows.length > 0) {
+        const returnedId = Object.values(result.rows[0])[0];
+        return Number(returnedId);
+    }
+
+    return 0;
+}
+
+export async function getSql<T>(sql: string, params: Array<any>, pool: Pool = db): Promise<T[]> {
+    const pgSql = normalizeSql(sql);
+    const result = await pool.query(pgSql, params);
+    return result.rows as T[];
+}

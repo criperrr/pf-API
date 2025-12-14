@@ -20,6 +20,7 @@ import {
 import { success } from "../utils/responseHelpers.js";
 import { AppError } from "../types/ApiError.js";
 import { filterQuery } from "../utils/gradesFilter.js";
+import { Users } from "../models/users.js";
 
 interface JwtTokenPayload {
     id_User: string;
@@ -40,18 +41,34 @@ export async function createToken(
         }
 
         const jwtToken = req.headers.authorization.split(" ")[1];
+        const masterToken = req.headers["x-master-token"] as string;
 
-        if (!jwtToken) {
-            throw new AppError("Invalid JWT token format.", 401, "AUTH_INVALID_PAYLOAD");
+        if (!jwtToken && !masterToken) {
+            throw new AppError(
+                "Invalid JWT token format and no x-master-token provided",
+                401,
+                "AUTH_INVALID_PAYLOAD"
+            );
         }
 
-        const payload = jwt.decode(jwtToken) as JwtTokenPayload;
-
-        if (!payload || !payload.id_User) {
-            throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
+        let userId = "";
+        if (!jwtToken && masterToken) {
+            const { id_User } = await queryOne<Users>(
+                "SELECT id_User FROM Users WHERE masterToken = ?",
+                [masterToken],
+                db
+            );
+            userId = id_User + "";
         }
 
-        const userId = payload.id_User;
+        if ((jwtToken && !masterToken) || (jwtToken && masterToken)) {
+            let payload = jwt.decode(jwtToken) as JwtTokenPayload;
+
+            if (!payload || !payload.id_User) {
+                throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
+            }
+            userId = payload.id_User;
+        }
 
         verifyEmptyFields({ email, password, userId });
 
@@ -74,7 +91,7 @@ export async function createToken(
             nsacAccountId = existingAccount.id_NsacAccount;
         } else {
             nsacAccountId = await insertSql(
-                "INSERT INTO NsacAccount(email, password) VALUES (?, ?)",
+                "INSERT INTO NsacAccount(email, password) VALUES (?, ?) RETURNING id_NsacAccount",
                 [email, encryptedPassword],
                 db
             );
@@ -96,7 +113,7 @@ export async function createToken(
         );
 
         const apiTokenId = await insertSql(
-            "INSERT INTO apiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?)",
+            "INSERT INTO apiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?) RETURNING id_Token",
             [userId, nsacAccountId, encryptedCookie, apiToken],
             db
         );
