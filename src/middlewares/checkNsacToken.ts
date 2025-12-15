@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import db, { runSql } from "../utils/database.js";
 import { AppError } from "../types/ApiError.js";
 
-export async function checkApiKeyAuth(req: Request, res: Response, next: NextFunction) {
+export async function checkApiKeyAuth(req: Request, _: Response, next: NextFunction) {
     const APIToken = req.headers["x-api-token"] as string;
 
     if (!APIToken) throw new AppError("No token provived", 401, "AUTH_MISSING_TOKEN");

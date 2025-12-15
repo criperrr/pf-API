@@ -1,14 +1,13 @@
 import * as cheerio from "cheerio";
 import { verifyCookie } from "./verifyCookie.js";
-import { AppError } from "../types/ApiError.js";
 import {
     FullGrades,
-    recoveryMessages,
-    recoveryStatusCode,
+    RecoveryStatusCode,
+    RecoveryMessage,
     ResultData,
     YearInfo,
+    AllYearsResponse,
     BimesterData,
-    AllYearsInfo,
     UnifiedBimesterData,
     PersonalBiInformation,
     ClassBiInformation,
@@ -102,7 +101,7 @@ export async function getGrades(
     logToken: string,
     APIToken?: string,
     year?: number
-): Promise<AllYearsInfo> {
+): Promise<AllYearsResponse> {
     const MAX_BIMESTERS = 4;
     const $ = await fetchBoletimDOM(logToken, APIToken);
 
@@ -202,7 +201,7 @@ export async function getGrades(
                                 const lastSpanChild = $(cell).children().last();
                                 const completeStatus = ($(lastSpanChild)
                                     .attr("title")
-                                    ?.toString() || "Não aconteceu") as recoveryMessages;
+                                    ?.toString() || "Não aconteceu") as RecoveryMessage;
                                 let statusCode = $(lastSpanChild).text().trim();
                                 if (statusCode === "-") statusCode = "NAC";
                                 const recoveryBool = ["SAT", "INS", "NC"].includes(statusCode);
@@ -211,7 +210,7 @@ export async function getGrades(
                                         ...personalResults,
                                         recovery: recoveryBool,
                                         recovered: personalResults.grade >= 6,
-                                        recoveryCode: statusCode as recoveryStatusCode,
+                                        recoveryCode: statusCode as RecoveryStatusCode,
                                         recoveryMessage: completeStatus,
                                     };
                                 } else {
@@ -263,7 +262,7 @@ export async function getGrades(
         }));
 
         const resultYearInfo: YearInfo = {
-            tittle: tittleLabel!,
+            title: tittleLabel!,
             year: parsedYear,
             status: parsedStatus,
             grades: fullGradesObj,

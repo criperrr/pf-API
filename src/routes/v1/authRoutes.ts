@@ -1,5 +1,7 @@
 import { Router } from "express";
+
 import * as authController from "../../controllers/authController.js";
+
 import { checkBody } from "../../middlewares/checkBody.js";
 import { checkAuth } from "../../middlewares/checkAuth.js";
 

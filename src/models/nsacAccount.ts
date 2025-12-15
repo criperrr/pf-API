@@ -1,5 +1,5 @@
 export type NsacAccount = {
-    id_NsacAccount?: number;
+    id_nsacaccount?: number;
     email: string;
     password: string;
 };

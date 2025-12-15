@@ -4,31 +4,30 @@ import jwt from "jsonwebtoken";
 import verifyEmptyFields from "../utils/emptyFields.js";
 import { encrypt, generateRandomString, decrypt } from "../utils/crypto.js";
 import db, { getSql, runSql, queryOne, insertSql } from "../utils/database.js";
-import { ApiToken } from "../models/ApiToken.js";
 import { login } from "../utils/loginNsac.js";
 import { getGrades } from "../utils/getGrades.js";
-import {
-    ApiResponse,
-    BasicNsacApiRequest,
-    NsacApiResponse,
-    NsacToken,
-    NsacTokensResponse,
-    DeleteTokenRequest,
-    DeleteTokenResponse,
-    QueryFilter,
-} from "../types/index.js";
 import { success } from "../utils/responseHelpers.js";
-import { AppError } from "../types/ApiError.js";
-import { filterQuery } from "../utils/gradesFilter.js";
+import { filterQuery } from "../services/nsacService.js";
+
+import { ApiToken } from "../models/ApiToken.js";
 import { Users } from "../models/users.js";
 
-interface JwtTokenPayload {
-    id_User: string;
-    email: string;
-}
+import { AppError } from "../types/ApiError.js";
+
+import {
+    ApiResponse,
+    NsacToken,
+    NsacTokensResponse,
+    NsacAuthResponse,
+    DeleteTokenResponse,
+    JwtTokenPayload,
+    BasicNsacApiRequest,
+    DeleteTokenRequest,
+    QueryFilter,
+} from "../types/index.js";
 
 export async function createToken(
-    req: Request<{}, ApiResponse<NsacApiResponse>, BasicNsacApiRequest>,
+    req: Request<{}, ApiResponse<NsacAuthResponse>, BasicNsacApiRequest>,
     res: Response,
     next: NextFunction
 ) {
@@ -36,11 +35,8 @@ export async function createToken(
         const { email, password } = req.body;
 
         // acho que é impossível chegar aq por causa dos middlewares mas pro typescript n encher o saco é isso ai
-        if (!req.headers.authorization) {
-            throw new AppError("No Authorization header", 401, "AUTH_HEADER_MISSING");
-        }
 
-        const jwtToken = req.headers.authorization.split(" ")[1];
+        const jwtToken = req.headers.authorization!.split(" ")[1];
         const masterToken = req.headers["x-master-token"] as string;
 
         if (!jwtToken && !masterToken) {
@@ -53,21 +49,21 @@ export async function createToken(
 
         let userId = "";
         if (!jwtToken && masterToken) {
-            const { id_User } = await queryOne<Users>(
+            const { id_user } = await queryOne<Users>(
                 "SELECT id_User FROM Users WHERE masterToken = ?",
                 [masterToken],
                 db
             );
-            userId = id_User + "";
+            userId = id_user + "";
         }
 
         if ((jwtToken && !masterToken) || (jwtToken && masterToken)) {
             let payload = jwt.decode(jwtToken) as JwtTokenPayload;
 
-            if (!payload || !payload.id_User) {
+            if (!payload || !payload.id_user) {
                 throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
             }
-            userId = payload.id_User;
+            userId = payload.id_user;
         }
 
         verifyEmptyFields({ email, password, userId });
@@ -80,7 +76,7 @@ export async function createToken(
 
         let nsacAccountId: number;
 
-        const existingAccount = await queryOne<{ id_NsacAccount: number }>(
+        const existingAccount = await queryOne<{ id_nsacaccount: number }>(
             "SELECT id_NsacAccount FROM NsacAccount WHERE email = ?",
             [email],
             db
@@ -88,7 +84,8 @@ export async function createToken(
 
         if (existingAccount) {
             console.log("Email já registrado. Usando ID existente.");
-            nsacAccountId = existingAccount.id_NsacAccount;
+            console.log(existingAccount);
+            nsacAccountId = existingAccount.id_nsacaccount;
         } else {
             nsacAccountId = await insertSql(
                 "INSERT INTO NsacAccount(email, password) VALUES (?, ?) RETURNING id_NsacAccount",
@@ -126,7 +123,7 @@ export async function createToken(
             );
         }
 
-        const data: NsacApiResponse = {
+        const data: NsacAuthResponse = {
             message: "Token created successfully",
             userId: userId,
             nsacAccountId: nsacAccountId,
@@ -152,11 +149,11 @@ export async function getTokens(
         const jwtToken = req.headers.authorization.split(" ")[1] as string;
         const payload = jwt.decode(jwtToken) as unknown as JwtTokenPayload;
 
-        if (!payload || !payload.id_User) {
+        if (!payload || !payload.id_user) {
             throw new AppError("Invalid JWT payload", 401, "AUTH_INVALID_TOKEN");
         }
 
-        const userId = payload.id_User;
+        const userId = payload.id_user;
 
         const apiTokens = await getSql<NsacToken>(
             "SELECT token, id_NsacAccount FROM apiToken WHERE id_User = ?",
@@ -259,8 +256,8 @@ export async function getApiGrades(
             );
         }
 
-        const { cookieString } = tokenData;
-        const decryptedCookies = decrypt(cookieString);
+        const { cookiestring } = tokenData;
+        const decryptedCookies = decrypt(cookiestring);
 
         const grades = await getGrades(decryptedCookies, apiToken);
         const filteredGrades = filterQuery(grades, req.query);

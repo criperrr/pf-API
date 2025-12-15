@@ -19,6 +19,11 @@ db.on("connect", () => {
     console.log("Connected to Supabase Postgres!");
 });
 
+db.on("error", (err) => {
+    console.log("error while connecting: ");
+    console.log(err);
+});
+
 const createUserTable = `
 CREATE TABLE IF NOT EXISTS Users (
     id_User SERIAL PRIMARY KEY,

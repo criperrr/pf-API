@@ -1,7 +1,7 @@
 export type Users = newUser & {
-    id_User?: number; // pra inserir no bd, que gera o id dps q eu enviar query
-    passwordHash: string;
-    masterToken: string;
+    id_user?: number; // pra inserir no bd, que gera o id dps q eu enviar query
+    passwordhash: string;
+    mastertoken: string;
 };
 export type newUser = {
     name: string;

@@ -1,9 +1,9 @@
 import e from "express";
 import "dotenv/config";
-import { ensureDbCreated } from "./utils/database.js";
-(async () => {
-    await ensureDbCreated();
-})();
+// import { ensureDbCreated } from "./utils/database.js";
+// (async () => {
+//     await ensureDbCreated();
+// })();
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
 import cors from "cors";

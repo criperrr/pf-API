@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+
 import { AppError } from "../types/ApiError.js";
-import db, { queryOne, runSql } from "../utils/database.js";
+import db, { queryOne } from "../utils/database.js";
+
 const secretKey: any = process.env.SECRETKEY;
 
 if (!secretKey) {
@@ -9,9 +11,11 @@ if (!secretKey) {
     process.exit(1);
 }
 
-export async function checkAuth(req: Request, res: Response, next: NextFunction) {
+export async function checkAuth(req: Request, _: Response, next: NextFunction) {
+    
     const jwtToken = req.headers.authorization!.split(" ")[1];
     const masterToken = req.headers["x-master-token"] as string;
+    console.log({jwtToken, masterToken})
 
     if (!jwtToken && !masterToken)
         throw new AppError(

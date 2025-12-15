@@ -1,23 +1,22 @@
-import { newUser, Users } from "../models/index.js";
-import db, { queryOne, runSql } from "../utils/database.js";
-import verifyEmptyFields from "../utils/emptyFields.js";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import {
-    ApiResponse,
-    LoginDataResponse,
-    RegisterAuthRequest,
-    RegisterDataResponse,
-} from "../types/index.js";
+
+import { newUser, Users } from "../models/index.js";
+
+import db, { queryOne, runSql } from "../utils/database.js";
+import verifyEmptyFields from "../utils/emptyFields.js";
 import { success } from "../utils/responseHelpers.js";
-import { AppError } from "../types/ApiError.js";
 import { generateRandomString } from "../utils/crypto.js";
 
-interface JwtTokenPayload {
-    id_User: string;
-    email: string;
-}
+import { AppError } from "../types/ApiError.js";
+import {
+    ApiResponse,
+    RegisterAuthRequest,
+    LoginResponse,
+    RegisterResponse,
+    JwtTokenPayload,
+} from "../types/index.js";
 
 const secretKey: any = process.env.SECRETKEY;
 if (!secretKey) {
@@ -26,7 +25,7 @@ if (!secretKey) {
 }
 
 export async function register(
-    req: Request<{}, ApiResponse<RegisterDataResponse>, RegisterAuthRequest>,
+    req: Request<{}, ApiResponse<RegisterResponse>, RegisterAuthRequest>,
     res: Response,
     next: NextFunction
 ) {
@@ -44,7 +43,7 @@ export async function register(
             [email],
             db
         );
-        if (emailExists && emailExists.id_User) {
+        if (emailExists && emailExists.id_user) {
             throw new AppError(
                 "This email is already registered.",
                 409,
@@ -61,7 +60,7 @@ export async function register(
             db
         );
 
-        const data: RegisterDataResponse = {
+        const data: RegisterResponse = {
             message: "Users created successfully!",
             userId: lastID,
         };
@@ -77,20 +76,20 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
     try {
         verifyEmptyFields({ email, password });
-        const { id_User, passwordHash }: Users = (await queryOne<Users>(
+        const { id_user, passwordhash }: Users = (await queryOne<Users>(
             "SELECT id_User, passwordHash FROM Users WHERE email = ?",
             [email],
             db
-        )) ?? { id_User: null, passwordHash: null };
-        const passMatch = id_User ? await bcrypt.compare(password, passwordHash) : false;
+        )) ?? { id_user: null, passwordhash: null };
+        const passMatch = id_user ? await bcrypt.compare(password, passwordhash) : false;
 
-        if (!id_User || !passMatch) {
+        if (!id_user || !passMatch) {
             throw new AppError("Invalid email or password", 401, "AUTH_INVALID_CREDENTIALS");
         }
 
         const jwtToken = jwt.sign(
             {
-                id_User,
+                id_user,
                 email,
             },
             secretKey,
@@ -101,9 +100,9 @@ export async function login(req: Request, res: Response, next: NextFunction) {
         );
         console.log("Users with email " + email + " logged in.");
 
-        const successData: LoginDataResponse = {
+        const successData: LoginResponse = {
             message: "Logged succesfully",
-            userId: id_User,
+            userId: id_user,
         };
 
         return res
@@ -117,7 +116,6 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
 export async function createMasterToken(req: Request, res: Response, next: NextFunction) {
     // passes jwt middleware
-
     try {
         const jwtToken = req.headers.authorization!.split(" ")[1];
 
@@ -127,14 +125,14 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
 
         const payload = jwt.decode(jwtToken) as JwtTokenPayload;
 
-        if (!payload || !payload.id_User) {
+        if (!payload || !payload.id_user) {
             throw new AppError("Invalid JWT token", 401, "AUTH_MISSING_PAYLOAD");
         }
 
-        const userId = payload.id_User;
+        const userId = payload.id_user;
         verifyEmptyFields({ userId });
 
-        let { masterToken } = (await queryOne<Users>(
+        let { mastertoken } = (await queryOne<Users>(
             "SELECT masterToken FROM Users WHERE id_User = ?",
             [userId],
             db
@@ -142,19 +140,19 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
             masterToken: null,
         };
 
-        if (masterToken !== null) {
+        if (mastertoken !== null) {
             return res.status(200).json(
                 success({
                     message: "Already have a token, returning it",
-                    masterToken: masterToken,
+                    masterToken: mastertoken,
                 })
             );
         }
 
-        masterToken = generateRandomString(30);
+        mastertoken = generateRandomString(30);
         const lastID = await runSql(
             "UPDATE Users SET masterToken = ? WHERE id_User = ?",
-            [masterToken, userId],
+            [mastertoken, userId],
             db
         );
 
@@ -162,7 +160,7 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
         return res.status(200).json(
             success({
                 message: "Token created successfully",
-                masterToken: masterToken,
+                masterToken: mastertoken,
             })
         );
     } catch (err: any) {

@@ -1,7 +1,7 @@
 export type ApiToken = {
-    id_Token: number;
-    id_User: number;
-    id_NsacAccount: number;
-    cookieString: string;
+    id_token: number;
+    id_user: number;
+    id_nsacaccount: number;
+    cookiestring: string;
     token: string;
 };

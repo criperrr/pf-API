@@ -1,10 +1,10 @@
-import { ApiError, ApiFailure, ApiSucess } from "../types/index.js";
+import { ApiError, ApiFailure, ApiSuccess } from "../types/index.js";
 
 export function failure(error: ApiError[]): ApiFailure {
     return { success: false, errors: error };
 }
 
-export function success<T = any>(data: T): ApiSucess<T> {
+export function success<T = any>(data: T): ApiSuccess<T> {
     return { success: true, data };
 }
 
