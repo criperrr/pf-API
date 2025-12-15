@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-preto.svg">
-  <img alt="Descrição do Banner SVG" src="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-branko.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-preto.svg" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+  <img alt="Descrição do Banner SVG" src="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-branko.svg" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
 </picture>
 
 <h1 align="center">NSAC Scraping API</h1>
@@ -256,10 +256,10 @@ Você pode filtrar o JSON de retorno direto na URL.
 4.  **Pegar notas do 2º bimestre MAIORES que 2:**
     `/api/nsac/grades?targetBimester[gt]=2`
 
-5. **Pegar as notas entre os bimestres 1 e 3, do 1° ano, de matérias que contenham "Mat" ou "Fund" OU "Hist"**
-   
-   `/api/nsac/grades?targetBimester[gt]=1&targetBimester[lt]=3&schoolYear=1&subjectName[contains]=Mat,Fund,Hist`
+5. **Pegar as notas entre os bimestres 1 e 3, do 1° ano, de matérias que contenham "Mat" ou "Fund" OU "Hist":** `/api/nsac/grades?targetBimester[gt]=1&targetBimester[lt]=3&schoolYear=1&subjectName[contains]=Mat,Fund,Hist`
 
 ---
-
+<div align="center">
 Desenvolvido com por alunos do CTI.
+</div>
+<img src="https://mir-s3-cdn-cf.behance.net/project_modules/fs/0427a253368969.5a8662bdf14d0.jpg" style="border-bottom-left-radius: 15px;border-bottom-right-radius: 15px;">
