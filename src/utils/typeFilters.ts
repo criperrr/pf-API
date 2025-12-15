@@ -48,18 +48,28 @@ export function checkBooleanFilters(value: boolean, filters: BooleanFilter | boo
     if (!Object.values(filters).some((val) => Array.isArray(val)))
         return booleanFilter(parseBoolean(value), filters);
 
-    return Object.values(filters)
-        .flat(Infinity)
-        .some((filter) => booleanFilter(parseBoolean(value), filter));
+    const flattenedFilters = Object.entries(filters).flatMap(([key, value]) => {
+        const flatValues = Array.isArray(value) ? value.flat(Infinity) : [value];
+        return flatValues.map((val) => ({ [key]: val }));
+    });
+
+    return flattenedFilters.some((filter) => booleanFilter(parseBoolean(value), filter));
 }
 
 export function checkStringFilters(value: string, filters: StringFilter | string): boolean {
     if (!Object.values(filters).some((val) => Array.isArray(val)))
         return stringFilter(value, filters);
 
-    return Object.values(filters)
-        .flat(Infinity)
-        .some((filter) => stringFilter(value, filter));
+    const flattenedFilters = Object.entries(filters).flatMap(([key, value]) => {
+        const splitValues = Array.isArray(value)
+            ? value.flatMap((val) => (typeof val === "string" ? val.split(",") : val))
+            : [value];
+        const flatValues = splitValues.flat(Infinity);
+        console.log({ flatValues, splitValues });
+        return flatValues.map((val) => ({ [key]: val }));
+    });
+
+    return flattenedFilters.some((filter) => stringFilter(value, filter));
 }
 
 export function checkNumberFilters(value: number, filters: NumberFilter | number): boolean {
@@ -83,7 +93,10 @@ export function checkNumberFilters(value: number, filters: NumberFilter | number
     if (!Object.values(filters).some((val) => Array.isArray(val)))
         return numericFilter(value, filters);
 
-    return Object.values(filters)
-        .flat(Infinity)
-        .some((filter) => numericFilter(value, filter));
+    const flattenedFilters = Object.entries(filters).flatMap(([key, value]) => {
+        const flatValues = Array.isArray(value) ? value.flat(Infinity) : [value];
+        return flatValues.map((val) => ({ [key]: val }));
+    });
+
+    return flattenedFilters.some((filter) => numericFilter(value, filter));
 }

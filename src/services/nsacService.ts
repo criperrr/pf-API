@@ -4,6 +4,7 @@ import { AllYearsResponse } from "../types/dtos/nsac.dto.js";
 import { checkNumberFilters, checkStringFilters } from "../utils/typeFilters.js";
 
 export function filterQuery(grades: AllYearsResponse, query: QueryFilter): AllYearsResponse {
+    console.log(query)
     let filteredData: YearInfo[] = [...grades.data];
 
     if (query.schoolYear !== undefined) {
