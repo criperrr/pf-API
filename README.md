@@ -1,4 +1,8 @@
-<img src="https://mir-s3-cdn-cf.behance.net/project_modules/fs/0427a253368969.5a8662bdf14d0.jpg">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-preto.svg">
+  <img alt="Descrição do Banner SVG" src="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-branko.svg">
+</picture>
+
 <h1 align="center">NSAC Scraping API</h1>
  
 <div align="center">
@@ -15,12 +19,12 @@
 
 ## 🧐 O que é e Por que foi feito?
 
-Nós e desenvolvi esse projeto para expandir os horizontes em relação ao **NSAC Online**.
+Nós desenvolvemos esse projeto para expandir os horizontes em relação ao **NSAC Online**.
 
 O **NSAC** é o sistema onde nós, do **Colégio Técnico Industrial (UNESP, Bauru)**, vemos nossas notas, mas ele é antigo e **monolítico** e **não possui uma API pública**. Isso significa que se quisermos criar um Bot no Discord, um App mobile ou um site que mostre nossas notas, não conseguimos pegar esses dados facilmente. O sistema retorna apenas páginas HTML pesadas.
 
 **A Solução:**
-Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o login por você, lê o HTML das notas (usando uma técnica chamada *Web Scraping* com Cheerio), limpa tudo e te entrega um **JSON** lindo, cheiroso e fácil de usar em qualquer linguagem de programação.
+Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o login por você, lê o HTML das notas (usando uma técnica chamada *Web Scraping* com **Cheerio**), limpa tudo e te entrega um **JSON** lindo, fofo, cheiroso e fácil de usar em qualquer linguagem de programação.
 
 ## ✨ Features 
 
@@ -49,7 +53,8 @@ Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o l
 * ![Cheerio](https://img.shields.io/badge/Cheerio-:D-orange?style=for-the-badge&logo=cheerio)<br>O [Cheerio](https://cheerio.js.org/) é a "alma" do _Scraping_. Ele analisa o HTML retornado pelo NSAC para localizar e extrair notas e médias.
 
 * <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge"> <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
-  O [Supabase](https://supabase.com) é uma plataforma de desenvolvimento [PostgreSQL](https://www.postgresql.org/) que utiliza os AWS para a fácil manutenção de bancos de dados PostgreSQL. Nós utilizamos essa plataforma para armazenar gratuitamente os dados da API.
+  
+  [Supabase](https://supabase.com) é uma plataforma de desenvolvimento [PostgreSQL](https://www.postgresql.org/) que utiliza os AWS para a fácil manutenção de bancos de dados PostgreSQL. Nós utilizamos essa plataforma para armazenar gratuitamente os dados da API.
 
 ---
 
@@ -77,7 +82,7 @@ Abra o **PowerShell** ou o Terminal do VS Code e digite:
 
 ```bash
 # 1. Clone o repositório
-git https://github.com/criperrr/pf-API.git
+git clone https://github.com/criperrr/pf-API.git
 
 # 2. Entre na pasta
 cd pf-API
@@ -252,6 +257,7 @@ Você pode filtrar o JSON de retorno direto na URL.
     `/api/nsac/grades?targetBimester[gt]=2`
 
 5. **Pegar as notas entre os bimestres 1 e 3, do 1° ano, de matérias que contenham "Mat" ou "Fund" OU "Hist"**
+   
    `/api/nsac/grades?targetBimester[gt]=1&targetBimester[lt]=3&schoolYear=1&subjectName[contains]=Mat,Fund,Hist`
 
 ---
