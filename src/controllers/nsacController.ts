@@ -82,17 +82,14 @@ export async function createToken(
             db
         );
 
-        if (existingAccount) {
-            console.log("Email já registrado. Usando ID existente.");
-            console.log(existingAccount);
+        if (existingAccount) 
             nsacAccountId = existingAccount.id_nsacaccount;
-        } else {
+         else {
             nsacAccountId = await insertSql(
-                "INSERT INTO NsacAccount(email, password) VALUES (?, ?) RETURNING id_NsacAccount",
-                [email, encryptedPassword],
+                "INSERT INTO NsacAccount(id_User, email, password) VALUES (?, ?, ?) RETURNING id_NsacAccount",
+                [userId, email, encryptedPassword],
                 db
             );
-            console.log("Novo email registrado.");
         }
 
         if (!nsacAccountId) {
@@ -105,7 +102,7 @@ export async function createToken(
 
         await runSql(
             "DELETE FROM apiToken WHERE id_User = ? AND id_NsacAccount = ?",
-            [userId, nsacAccountId.toString()],
+            [userId, nsacAccountId],
             db
         );
 

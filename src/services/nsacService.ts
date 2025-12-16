@@ -1,10 +1,9 @@
-import { AppError } from "../types/ApiError.js";
 import { NumberFilter, QueryFilter, StringFilter, YearInfo } from "../types/index.js";
 import { AllYearsResponse } from "../types/dtos/nsac.dto.js";
 import { checkNumberFilters, checkStringFilters } from "../utils/typeFilters.js";
 
 export function filterQuery(grades: AllYearsResponse, query: QueryFilter): AllYearsResponse {
-    console.log(query)
+    console.log(query);
     let filteredData: YearInfo[] = [...grades.data];
 
     if (query.schoolYear !== undefined) {
@@ -40,10 +39,23 @@ export function filterQuery(grades: AllYearsResponse, query: QueryFilter): AllYe
 
         filteredData = filteredData.map((yearInfo) => {
             yearInfo.grades = yearInfo.grades.filter((fullGrades, i) => {
-                return checkStringFilters(fullGrades.subjectName, subjectFilter);
+                return checkStringFilters(fullGrades.subjectName.toLowerCase(), subjectFilter);
             });
             return yearInfo;
         });
+    }
+    if (query.grade !== undefined) {
+        const gradeFilter = query.grade as NumberFilter | number;
+
+        filteredData = filteredData.map((yearInfo) => {
+            yearInfo.grades = yearInfo.grades.map((fullGrades) => {
+                fullGrades.bimesters = fullGrades.bimesters.filter((bimester) => {
+                    return checkNumberFilters(bimester.personal.grade, gradeFilter);
+                })
+                return fullGrades;
+            })
+            return yearInfo;
+        })
     }
     return {
         ...grades,

@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-preto.svg" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
-  <img alt="Descrição do Banner SVG" src="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-branko.svg" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+  <img alt="Descrição do Banner SVG" src="https://raw.githubusercontent.com/criperrr/pf-API/refs/heads/main/assets/cti-branko.svg" style="border-top-left-radius: 20px; border-top-right-radius: 20px;">
 </picture>
 
 <h1 align="center">NSAC Scraping API</h1>
@@ -10,8 +10,7 @@
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript" alt="TypeScript Badge">
     <img src="https://img.shields.io/badge/Express.js-5.x-lightgrey?style=for-the-badge&logo=express" alt="Express.js Badge">
     <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
-    <img src="https://img.shields.io/badge/Cheerio--orange?style=for-the-badge&logo=cheerio"
-    alt="Cheerio Badge">
+    <img src="https://img.shields.io/badge/Cheerio--orange?style=for-the-badge&logo=cheerio" alt="Cheerio Badge">
     <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge">
 </div>
 
@@ -21,7 +20,7 @@
 
 Nós desenvolvemos esse projeto para expandir os horizontes em relação ao **NSAC Online**.
 
-O **NSAC** é o sistema onde nós, do **Colégio Técnico Industrial (UNESP, Bauru)**, vemos nossas notas, mas ele é antigo e **monolítico** e **não possui uma API pública**. Isso significa que se quisermos criar um Bot no Discord, um App mobile ou um site que mostre nossas notas, não conseguimos pegar esses dados facilmente. O sistema retorna apenas páginas HTML pesadas.
+O **NSAC** é o sistema onde nós, do **Colégio Técnico Industrial (UNESP, Bauru)**, vemos nossas notas, mas ele é antigo e **monolítico** e **não possui uma API publicamente consumível**. Isso significa que se quisermos criar um Bot no Discord, um App mobile ou um site que mostre nossas notas, não conseguimos pegar esses dados facilmente. O sistema retorna apenas páginas HTML pesadas.
 
 **A Solução:**
 Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o login por você, lê o HTML das notas (usando uma técnica chamada *Web Scraping* com **Cheerio**), limpa tudo e te entrega um **JSON** lindo, fofo, cheiroso e fácil de usar em qualquer linguagem de programação.
@@ -105,12 +104,12 @@ SECRETKEY="batatinha_frita_123"
 
 # Chave para criptografar os dados do NSAC (AES-256).
 # ATENÇÃO: Precisa ser uma chave Hexadecimal de 32 bytes (64 caracteres).
-# Dica: Abra o node no terminal e rode: crypto.randomBytes(32).toString('hex')
+# Dica: Abra o node no terminal e rode: require('node:crypto').randomBytes(32).toString('hex')
 ENCRYPTIONKEY="hex_extremamente_secreto_de_32_bytes.(n_use_isso_como_senha.gere_uma)"
 
 # Link de conexão com o banco de dados (Supabase ou Postgres Local)
 # Exemplo: postgresql://postgres:senha@db.supabase.co:5432/postgres
-SUPACONN="SUA_STRING_DE_CONEXAO_AQUI"
+DBSTRING="SUA_STRING_DE_CONEXAO_AQUI"
 # se rodar pela primeira vez, descomente as linhas 3 à 6 no src/app.ts, roda, dps comenta dnv
 ```
 
@@ -260,6 +259,6 @@ Você pode filtrar o JSON de retorno direto na URL.
 
 ---
 <div align="center">
-Desenvolvido com por alunos do CTI.
+Desenvolvido com por alunos do CTI, UNESP.
 </div>
 <img src="https://mir-s3-cdn-cf.behance.net/project_modules/fs/0427a253368969.5a8662bdf14d0.jpg" style="border-bottom-left-radius: 15px;border-bottom-right-radius: 15px;">

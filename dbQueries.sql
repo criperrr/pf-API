@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS Users (
 
 CREATE TABLE IF NOT EXISTS NsacAccount (
     id_NsacAccount SERIAL PRIMARY KEY,
+    FOREIGN KEY (id_User) REFERENCES Users (id_User) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );

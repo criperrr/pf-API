@@ -46,7 +46,8 @@ export function decrypt(message: string): string {
     return decrypted;
 }
 
-export function generateRandomString(length: number) {
-    return crypto.randomBytes(length).toString("hex").toUpperCase();
+export function generateRandomString(length: number, upperCase: boolean = true) {
+    return upperCase
+        ? crypto.randomBytes(length).toString("hex").toUpperCase()
+        : crypto.randomBytes(length).toString("hex");
 }
-console.log();

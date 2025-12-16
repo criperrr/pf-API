@@ -1,6 +1,10 @@
 import { AppError } from "../types/ApiError.js";
 import { BooleanFilter, NumberFilter, StringFilter } from "../types/index.js";
 
+function removerAcentos(str: string): string {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function numericFilter(value: number, filter: NumberFilter | number): boolean {
     if (typeof filter === "number") {
         console.log(filter);
@@ -18,13 +22,14 @@ function numericFilter(value: number, filter: NumberFilter | number): boolean {
 }
 
 function stringFilter(value: string, filter: StringFilter | string): boolean {
+    const parsedValue = removerAcentos(value).toLocaleLowerCase();
     if (typeof filter === "string") {
         return value === filter;
     }
 
-    if (filter.eq !== undefined && value !== filter.eq) return false;
-    if (filter.contains !== undefined && !value.includes(filter.contains)) return false;
-    if (filter.startsWith !== undefined && !value.startsWith(filter.startsWith)) return false;
+    if (filter.eq !== undefined && parsedValue !== filter.eq) return false;
+    if (filter.contains !== undefined && !parsedValue.includes(filter.contains)) return false;
+    if (filter.startsWith !== undefined && !parsedValue.startsWith(filter.startsWith)) return false;
 
     return true;
 }
@@ -57,46 +62,44 @@ export function checkBooleanFilters(value: boolean, filters: BooleanFilter | boo
 }
 
 export function checkStringFilters(value: string, filters: StringFilter | string): boolean {
-    if (!Object.values(filters).some((val) => Array.isArray(val)))
-        return stringFilter(value, filters);
+    const flattenedFilters = Object.entries(filters)
+        .map(([key, value]) => {
+            const splitValues = [removerAcentos(value).toLocaleLowerCase()].flat(Infinity);
 
-    const flattenedFilters = Object.entries(filters).flatMap(([key, value]) => {
-        const splitValues = Array.isArray(value)
-            ? value.flatMap((val) => (typeof val === "string" ? val.split(",") : val))
-            : [value];
-        const flatValues = splitValues.flat(Infinity);
-        console.log({ flatValues, splitValues });
-        return flatValues.map((val) => ({ [key]: val }));
-    });
+            const flatValues = splitValues
+                .map((val) => (typeof val === "string" ? val.trim().split(",") : val))
+                .flat(Infinity);
+
+            return flatValues.map((val) => {
+                return { [key]: val };
+            });
+        })
+        .flat(Infinity) as StringFilter[];
 
     return flattenedFilters.some((filter) => stringFilter(value, filter));
 }
 
 export function checkNumberFilters(value: number, filters: NumberFilter | number): boolean {
-    (Object.keys(filters) as (keyof NumberFilter)[]).forEach((key) => {
-        if (typeof filters === "object" && filters !== null) {
-            if (Array.isArray(filters[key])) {
-                filters[key] = (filters[key] as number[]).map((filter: number) => {
+    const flattenedFilters = Object.entries(filters)
+        .map(([key, value]) => {
+            const splitValues = [value].flat(Infinity);
+
+            const flatValues = splitValues
+                .map((val) => (typeof val === "string" ? val.trim().split(",") : val))
+                .flat(Infinity)
+                .map((filter) => {
                     const numberValue = Number(filter);
                     if (Number.isNaN(numberValue))
                         throw new AppError("Invalid input parameters", 400, "INVALID_PARAMS");
                     return numberValue;
-                }) as unknown as number;
-            } else {
-                filters[key] = Number(filters[key]);
-                if (Number.isNaN(filters[key])) {
-                    throw new AppError("Invalid input parameters", 400, "INVALID_PARAMS");
-                }
-            }
-        }
-    });
-    if (!Object.values(filters).some((val) => Array.isArray(val)))
-        return numericFilter(value, filters);
+                });
 
-    const flattenedFilters = Object.entries(filters).flatMap(([key, value]) => {
-        const flatValues = Array.isArray(value) ? value.flat(Infinity) : [value];
-        return flatValues.map((val) => ({ [key]: val }));
-    });
+            return flatValues.map((val) => {
+                return { [key]: val };
+            });
+        })
+        .flat(Infinity) as NumberFilter[];
+    console.log(flattenedFilters);
 
     return flattenedFilters.some((filter) => numericFilter(value, filter));
 }

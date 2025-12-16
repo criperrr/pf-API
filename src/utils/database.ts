@@ -1,10 +1,10 @@
 import { Pool } from "pg";
 import "dotenv/config";
 
-const connectionString = process.env.SUPACONN;
+const connectionString = process.env.DBSTRING;
 
 if (!connectionString) {
-    console.error("FATAL ERROR: SUPACONN is not defined in .env");
+    console.error("FATAL ERROR: DBSTRING is not defined in .env");
     process.exit(1);
 }
 
@@ -15,12 +15,18 @@ const db = new Pool({
     },
 });
 
-db.on("connect", () => {
-    console.log("Connected to Supabase Postgres!");
-});
+try {
+    db.connect();
+    console.log("Successful PostgreSQL connection!");
+
+} catch (err: any){
+    console.log("Error while connecting to PostgreSQL!");
+    console.log(err)
+}
+
 
 db.on("error", (err) => {
-    console.log("error while connecting: ");
+    console.log("Error while connecting: ");
     console.log(err);
 });
 
@@ -37,6 +43,8 @@ CREATE TABLE IF NOT EXISTS Users (
 const createNsacAccountTable = `
 CREATE TABLE IF NOT EXISTS NsacAccount (
     id_NsacAccount SERIAL PRIMARY KEY,
+    id_User INTEGER NOT NULL,
+    FOREIGN KEY (id_User) REFERENCES Users (id_User) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
@@ -69,7 +77,9 @@ export async function ensureDbCreated() {
 }
 
 // preguiça de mudar o projeto inteiro
+// eu tava usando sqlite antes, mudei pra postgresql
 function normalizeSql(sql: string): string {
+    // INSERT INTO table(column1, column2) VALUES (?, ?) => INSERT INTO table(column1, column2) VALUES ($1, $2)
     let i = 1;
     return sql.replace(/\?/g, () => `$${i++}`);
 }
