@@ -15,14 +15,14 @@ const db = new Pool({
     },
 });
 
-try {
-    db.connect();
-    console.log("Successful PostgreSQL connection!");
+// try {
+//     db.connect();
+//     console.log("Successful PostgreSQL connection!");
 
-} catch (err: any){
-    console.log("Error while connecting to PostgreSQL!");
-    console.log(err)
-}
+// } catch (err: any){
+//     console.log("Error while connecting to PostgreSQL!");
+//     console.log(err)
+// }
 
 
 db.on("error", (err) => {

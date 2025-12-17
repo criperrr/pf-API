@@ -17,8 +17,8 @@ const port = process.env.PORT || 3000;
 
 app.listen(port, async () => {
     console.log(`RUNNING at ${port}!`);
-    console.log("Trying to connect to PostgreSQL database and ensure all tables are created!");
-    await ensureDbCreated();
+    // console.log("Trying to connect to PostgreSQL database and ensure all tables are created!");
+    // await ensureDbCreated();
 });
 
 app.use("/api/nsac", nsacRoutes);

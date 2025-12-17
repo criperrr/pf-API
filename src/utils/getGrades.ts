@@ -159,14 +159,6 @@ export async function getGrades(
                     const currentBimester = Math.floor(cellIndex / MAX_BIMESTERS);
                     const cellType = map[cellIndex % MAX_BIMESTERS];
                     if (cellIndex < 16) {
-                        if ((cellIndex + 1) % MAX_BIMESTERS === 0) {
-                            // 4, 8, 12, 16 (bimestres 1, 2, 3, 4)
-                            bimesterObj.push({
-                                bimester: currentBimester + 1,
-                                personal: personalResults,
-                                class: classResults,
-                            });
-                        }
                         switch (cellType) {
                             case "userGrade":
                                 const userGradeValue = extractAndCleanGrade($(cell).text());
@@ -226,6 +218,14 @@ export async function getGrades(
                                     };
                                 }
                                 break;
+                        }
+                        if ((cellIndex + 1) % MAX_BIMESTERS === 0) {
+                            // 4, 8, 12, 16 (bimestres 1, 2, 3, 4)
+                            bimesterObj.push({
+                                bimester: currentBimester + 1,
+                                personal: { ...personalResults },
+                                class: { ...classResults },
+                            });
                         }
                     } else {
                         if (cellIndex == 16) {
