@@ -13,7 +13,7 @@ if (!secretKey) {
 
 export async function checkAuth(req: Request, _: Response, next: NextFunction) {
     
-    const jwtToken = req.headers.authorization!.split(" ")[1];
+    const jwtToken = req.headers.authorization?.split(" ")[1];
     const masterToken = req.headers["x-master-token"] as string;
     console.log({jwtToken, masterToken})
 

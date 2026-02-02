@@ -136,103 +136,77 @@ npm run dev-serverless
 **URL Base:** `http://localhost:3000/api`
 **URL Pública base:** `https://api-nsac.netlify.app/api` _(Não posso garantir que ela está funcionando quando vc estiver vendo isso)_
 **URL base (serverless):** `http://localhost:8888/api`
-## 🔐 1. Autenticação (Sua conta na API)
+
+A API utiliza uma arquitetura de **dois níveis de autenticação**:
+1.  **Tokens de Gerenciamento:** (JWT ou Master Token) para vincular e desvincular contas.
+2.  **Tokens de Consulta:** (`x-api-token`) para realizar o scraping das notas.
+
+## 🔐 1. Autenticação (Conta da API)
+
+Gerencia quem tem permissão para usar o serviço de scraping.
+
 ### Registrar Usuário
 `POST /auth/register`
-Cria um usuário para usar a API. 
-Esse endpoint precisa de uma atualização pra ser anti-bot, ele é feito pra ser usado com um front-end, que será implementado posteriormente.
-*   **Body (JSON):**
-    ```jsonc
-    {
-      "name": "Seu Nome",
-      "email": "dev@exemplo.com",
-      "password": "senha_forte_da_api"
-    }
+*   **Corpo (JSON):** 
+    ```json
+    { "name": "Seu Nome", "email": "dev@exemplo.com", "password": "senha_forte" }
     ```
 
 ### Login
 `POST /auth/login`
-Retorna um **Token JWT** (Bearer Token) necessário para criar chaves do NSAC.
-
-*   **Body (JSON):**
-    ```jsonc
-    {
-      "email": "dev@exemplo.com",
-      "password": "senha_forte_da_api"
-    }
+*   **Corpo (JSON):** 
+    ```json
+    { "email": "dev@exemplo.com", "password": "senha_forte" }
     ```
-*   **Resposta:** O token vem no Header `Authorization`.
+*   **Resposta:** O Token JWT é retornado no **Header** `Authorization` no formato `Bearer <TOKEN>`.
 
-### Criar Token Mestre (Dev)
+### Criar Master Token (Permanente)
 `POST /auth/tokens`
-Gera um token permanente para o usuário (Master Token), útil para scripts que não querem ficar fazendo login toda hora.
-*   **Header Obrigatório:** `Authorization: Bearer <SEU_JWT>`
+*   **Header:** `Authorization: Bearer <SEU_JWT>`
+*   **Descrição:** Gera um token que não expira, útil para integrações via código.
+*   **Resposta:** Retorna o `masterToken`.
 
 ---
 
-## 🏫 2. Contas NSAC (`/nsac/accounts`)
-Endpoints para vincular sua conta do portal acadêmico à API.
+## 🏫 2. Gerenciamento NSAC (`/nsac/accounts`)
 
-### Vincular Conta NSAC e Gerar Token
+Vincula suas credenciais do portal acadêmico à API para gerar tokens de consulta.
+
+### Vincular Conta e Gerar Token de Consulta
 `POST /nsac/accounts`
-Realiza o login no portal NSAC, criptografa os cookies e retorna um **`apiToken`**. Esse token é o que você usará para ver as notas.
-
-*   **Header Obrigatório:** `Authorization: Bearer <SEU_JWT>` **OU** `x-master-token: <MASTER_TOKEN>`
-*   **Body (JSON):**
-    ```jsonc
-    {
-      "email": "aluno@nsac.unesp.br",
-      "password": "senha_do_nsac"
-    }
+*   **Header (Um dos dois):** 
+    *   `Authorization: Bearer <SEU_JWT>`
+    *   `x-master-token: <SEU_MASTER_TOKEN>`
+*   **Corpo (JSON):** 
+    ```json
+    { "email": "aluno@unesp.br", "password": "senha_do_nsac" }
     ```
-*   **Resposta (200 OK):**
-    ```jsonc
-    {
-        "success": true,
-        "data": {
-            "apiToken": "TOK3N_GERAD0_PARA_CONSULTAR_NOTAS..."
-        }
-    }
-    ```
-
-### Listar Seus Tokens
-`GET /nsac/accounts`
-*   **Header Obrigatório:** `Authorization: Bearer <SEU_JWT>`
-
-### Deletar/Desvincular Token
-`DELETE /nsac/accounts`
-*   **Header Obrigatório:** `Authorization: Bearer <SEU_JWT>`
-*   **Body (JSON):** `{ "token": "API_TOKEN_PARA_DELETAR" }`
+*   **Descrição:** Faz login no NSAC, salva a sessão criptografada e retorna o `apiToken`.
 
 ### Verificar Status do Token
 `GET /nsac/accounts/token-status`
-Verifica se um `apiToken` existe e é válido no banco de dados.
-*   **Header Obrigatório:** `x-api-token: <SEU_API_TOKEN_NSAC>`
+*   **Header:** `x-api-token: <SEU_API_TOKEN_NSAC>`
+*   **Descrição:** Verifica se o token informado existe e é válido no banco de dados.
+
+### Listar Meus Tokens
+`GET /nsac/accounts`
+*   **Header:** `Authorization: Bearer <SEU_JWT>`
+
+### Remover/Desvincular Token
+`DELETE /nsac/accounts`
+*   **Header:** `Authorization: Bearer <SEU_JWT>`
+*   **Corpo (JSON):** `{ "token": "TOKEN_PARA_DELETAR" }`
 
 ---
 
-## 📊 3. Notas e Boletins (`/nsac/grades`)
-O endpoint principal para extrair os dados.
+## 📊 3. Notas e Scraping (`/nsac/grades`)
 
-### Consultar Notas (Com Filtros)
+### Consultar Boletim (Com Filtros)
 `GET /nsac/grades`
-
-Este endpoint retorna as notas do usuário e médias da turma. Ele aceita filtros avançados via URL (Query Params).
-
 *   **Header Obrigatório:** `x-api-token: <SEU_API_TOKEN_NSAC>`
-*   **Exemplo de Resposta:**
-    ```jsonc
-    {
-      "success": true,
-      "data": {
-        "warning": false,
-        "userCurrentYear": 2,
-        "filteredGrades": {
-           "data": [ "..." ] // Lista de matérias e notas; você pode entender essa estrutura de dados lendo src/types/models/nsac.ts
-        }
-      }
-    }
-    ```
+*   **Descrição:** Extrai os dados do portal em tempo real (ou via cache de sessão).
+
+---
 
 # 🧠 Guia Completo de Filtragem (NSAC Service)
 
