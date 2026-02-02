@@ -12,16 +12,17 @@ if (!secretKey) {
 }
 
 export async function checkAuth(req: Request, _: Response, next: NextFunction) {
-    
-    const jwtToken = req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
+    const jwtToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+
     const masterToken = req.headers["x-master-token"] as string;
-    console.log({jwtToken, masterToken})
+    console.log({ jwtToken, masterToken });
 
     if (!jwtToken && !masterToken)
         throw new AppError(
             "No x-master-token OR JWTtoken provived",
             401,
-            "AUTH_MISSING_CREDENTIALS"
+            "AUTH_MISSING_CREDENTIALS",
         );
 
     if (jwtToken) {
@@ -34,12 +35,13 @@ export async function checkAuth(req: Request, _: Response, next: NextFunction) {
                 }
             }
 
-            next();
+            return next();
         });
+        return
     }
     if (masterToken) {
         const user = await queryOne("SELECT 1 FROM Users WHERE masterToken = ?", [masterToken], db);
         if (!user) throw new AppError("Invalid masterToken", 403, "AUTH_INVALID_TOKEN");
-        next();
+        return next();
     }
 }
