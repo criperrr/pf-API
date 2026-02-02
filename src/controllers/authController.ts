@@ -27,7 +27,7 @@ if (!secretKey) {
 export async function register(
     req: Request<{}, ApiResponse<RegisterResponse>, RegisterAuthRequest>,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ) {
     const { name, email, password }: newUser = req.body;
 
@@ -41,14 +41,14 @@ export async function register(
         const emailExists: Users = await queryOne<Users>(
             "SELECT id_User FROM Users WHERE email = ?",
             [email],
-            db
+            db,
         );
         if (emailExists && emailExists.id_user) {
             throw new AppError(
                 "This email is already registered.",
                 409,
                 "REG_DUPLICATED_EMAIL",
-                "email"
+                "email",
             );
         }
 
@@ -57,7 +57,7 @@ export async function register(
         const lastID = await runSql(
             "INSERT INTO Users(name, email, passwordHash) VALUES (?, ?, ?) RETURNING id_User",
             [name, email, passHash],
-            db
+            db,
         );
 
         const data: RegisterResponse = {
@@ -79,7 +79,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
         const { id_user, passwordhash }: Users = (await queryOne<Users>(
             "SELECT id_User, passwordHash FROM Users WHERE email = ?",
             [email],
-            db
+            db,
         )) ?? { id_user: null, passwordhash: null };
         const passMatch = id_user ? await bcrypt.compare(password, passwordhash) : false;
 
@@ -96,7 +96,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
             {
                 expiresIn: "3h",
                 issuer: "Vitinho", // desculpa vitinho :)
-            }
+            },
         );
         console.log("Users with email " + email + " logged in.");
 
@@ -117,7 +117,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 export async function createMasterToken(req: Request, res: Response, next: NextFunction) {
     // passes jwt middleware
     try {
-        const jwtToken = req.headers.authorization!.split(" ")[1];
+        const authHeader = req.headers.authorization;
+        const jwtToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
 
         if (!jwtToken) {
             throw new AppError("Invalid JWT token format.", 401, "AUTH_INVALID_PAYLOAD");
@@ -135,7 +136,7 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
         let { mastertoken } = (await queryOne<Users>(
             "SELECT masterToken FROM Users WHERE id_User = ?",
             [userId],
-            db
+            db,
         )) ?? {
             masterToken: null,
         };
@@ -145,7 +146,7 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
                 success({
                     message: "Already have a token, returning it",
                     masterToken: mastertoken,
-                })
+                }),
             );
         }
 
@@ -153,7 +154,7 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
         const lastID = await runSql(
             "UPDATE Users SET masterToken = ? WHERE id_User = ?",
             [mastertoken, userId],
-            db
+            db,
         );
 
         if (!lastID) throw new Error("Failed to update database while creating masterToken.");
@@ -161,7 +162,7 @@ export async function createMasterToken(req: Request, res: Response, next: NextF
             success({
                 message: "Token created successfully",
                 masterToken: mastertoken,
-            })
+            }),
         );
     } catch (err: any) {
         next(err);
