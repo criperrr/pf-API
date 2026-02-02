@@ -20,9 +20,6 @@ app.use(cors());
 //     // await ensureDbCreated();
 // });
 /* ***************************************** */
-app.use("/api/test", async (req, res) => {
-    res.status(200).json({ tron: "cutron" });
-});
 app.use("/api/nsac", nsacRoutes);
 app.use("/api/auth", authRoutes);
 
