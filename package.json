@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "npx tsx --watch ./src/app.ts --serverless-mode=false",
-    "dev-serverless": ""
+    "dev-serverless": "ntl dev"
   },
   "type": "module",
   "devDependencies": {

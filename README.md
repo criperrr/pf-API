@@ -121,12 +121,21 @@ DBSTRING="SUA_STRING_DE_CONEXAO_AQUI"
 npm run dev
 ```
 Se aparecer `RUNNING at 3000`, parabéns! 🎉 A API está viva.
+
+#### 4.1 Serverless
+Se quiser testar, você também pode testar o serverless com netlify.
+Entretanto, certifique-se de ter o netlify-cli instalado e totalmente configurado com sua conta e um projeto.
+Com tudo configurado, simplesmente execute:
+```bash
+npm run dev-serverless
+``` 
 ---
 
 # 📚 Documentação da API
 
 **URL Base:** `http://localhost:3000/api`
-
+**URL Pública base:** `https://api-nsac.netlify.app/api` _(Não posso garantir que ela está funcionando quando vc estiver vendo isso)_
+**URL base (serverless):** `http://localhost:8888/api`
 ## 🔐 1. Autenticação (Sua conta na API)
 ### Registrar Usuário
 `POST /auth/register`
@@ -225,39 +234,94 @@ Este endpoint retorna as notas do usuário e médias da turma. Ele aceita filtro
     }
     ```
 
-### 🧠 Como usar os Filtros
-Você pode filtrar o JSON de retorno direto na URL. 
+# 🧠 Guia Completo de Filtragem (NSAC Service)
 
-**Campos disponíveis (por enquanto):**
-*   `schoolYear`: Ano letivo (1, 2 ou 3).
-*   `targetBimester`: Bimestre (1, 2, 3 ou 4).
-*   `subjectName`: Nome da matéria.
+A API do NSAC permite que você realize consultas altamente granulares diretamente via Query Parameters. O motor de filtragem processa o JSON de retorno e remove dinamicamente os objetos que não correspondem aos critérios definidos, mantendo a integridade da estrutura de dados.
 
-**Operadores disponíveis:**
-*   `eq`: Igual a (string, booleans e numeros)
-*   `neq`: Diferente de (booleans e numeros)
-*   `gt`: Maior que
-*   `gte`: Maior ou igual a
-*   `lt`: Menor que
-*   `lte`: Menor ou igual a
-*   `contains`: Contém texto (para strings)
-*   `startsWith`: Começa com (para strings)
+---
 
-**Exemplos de URL:**
+## 🛠️ Campos Disponíveis para Filtro
 
-1.  **Pegar tudo do 2º Ano:**
-    `/api/nsac/grades?schoolYear=2`
+| Parâmetro        | Tipo      | Descrição                                                              |
+| :--------------- | :-------- | :--------------------------------------------------------------------- |
+| `schoolYear`     | `Number`  | Filtra pelo índice do ano letivo (1, 2 ou 3).                          |
+| `targetBimester` | `Number`  | Filtra bimestres específicos (1 a 4) dentro de cada matéria e métrica. |
+| `subjectName`    | `String`  | Filtra pelo nome da disciplina/matéria.                                |
+| `grade`          | `Number`  | Filtra pela nota individual do aluno em cada bimestre.                 |
+| `classAverage`   | `Number`  | Filtra com base na média da sala/classe.                               |
+| `isRecovery`     | `Boolean` | Filtra se o aluno está em recuperação (`true`/`false`).                |
+| `recoveryCode`   | `String`  | Filtra pelo código de recuperação. Possíveis códigos são: **"NAC"** (Não AConteceu); **"NCP"** (Não ComPareceu); **"INS"** (INSatisfatório); **"SAT"** (SATisfatório)|
 
-2.  **Pegar apenas notas do 3º Bimestre:**
-    `/api/nsac/grades?targetBimester=3`
+---
 
-3.  **Pegar matérias de "Matemática" (contém "Mat"):**
-    `/api/nsac/grades?subjectName[contains]=Mat`
+## 🔢 Operadores Suportados
 
-4.  **Pegar notas do 2º bimestre MAIORES que 2:**
-    `/api/nsac/grades?targetBimester[gt]=2`
+Dependendo do tipo do campo, você pode utilizar operadores para refinar a busca usando a sintaxe `campo[operador]=valor`.
 
-5. **Pegar as notas entre os bimestres 1 e 3, do 1° ano, de matérias que contenham "Mat" ou "Fund" OU "Hist":** `/api/nsac/grades?targetBimester[gt]=1&targetBimester[lt]=3&schoolYear=1&subjectName[contains]=Mat,Fund,Hist`
+### Para Números (`grade`, `schoolYear`, `targetBimester`, `classAverage`)
+* `eq`: Igual a
+* `neq`: Diferente de
+* `gt`: Maior que ($>$)
+* `gte`: Maior ou igual a ($\geq$)
+* `lt`: Menor que ($<$)
+* `lte`: Menor ou igual a ($\leq$)
+
+### Para Strings (`subjectName`, `recoveryCode`)
+* `eq`: Correspondência exata.
+* `contains`: Verifica se o texto contém a sub-string informada.
+* `startsWith`: Verifica se o texto inicia com o termo.
+
+### Para Booleanos (`isRecovery`)
+* `eq`: Igual a (`true` ou `false`).
+* `neq`: Diferente de.
+
+---
+
+## 💡 Exemplos de Uso
+
+### 1. Filtros Básicos e Posicionais
+* **Apenas dados do 2º Ano:**
+    `GET /api/nsac/grades?schoolYear=2`
+* **Apenas notas do 4º Bimestre:**
+    `GET /api/nsac/grades?targetBimester=4`
+
+### 2. Filtros de Performance Acadêmica
+* **Matérias onde a nota foi menor que 5.0:**
+    `GET /api/nsac/grades?grade[lt]=5`
+* **Matérias com nota entre 7 e 9:**
+    `GET /api/nsac/grades?grade[gte]=7&grade[lte]=9`
+* **Onde a média da classe foi maior que 8.0:**
+    `GET /api/nsac/grades?classAverage[gt]=8`
+
+### 3. Recuperação e Status
+* **Listar apenas bimestres onde o aluno está em recuperação:**
+    `GET /api/nsac/grades?isRecovery=true`
+* **Filtrar por código de recuperação específico (no exemplo, pega qualquer caso diferente de NAC):**
+    `GET /api/nsac/grades?recoveryCode=INS,SAT,NCP`
+* **Disciplinas sem código de recuperação (Status Não AConteceu):**
+    `GET /api/nsac/grades?recoveryCode[eq]=NAC`
+
+### 4. Busca Textual Avançada
+* **Disciplinas de Exatas (Matemática, Física, etc):**
+    `GET /api/nsac/grades?subjectName[contains]=Mat,Fis`
+* **Disciplinas que começam com "Língua":**
+    `GET /api/nsac/grades?subjectName[startsWith]=Lingua`
+
+---
+
+## 🚀 Consultas Combinadas (Complexas)
+
+Você pode empilhar filtros para gerar relatórios específicos. O motor aplica a lógica `AND` entre diferentes campos.
+
+**Cenário: Aluno quer ver notas de "Matemática" ou "Física", apenas do 3º ano, onde ele ficou com nota abaixo de 6 no 1º ou 2º bimestre:**
+
+```http
+GET /api/nsac/grades?schoolYear=3&subjectName[contains]=Mat,Fis&grade[lt]=6&targetBimester[lte]=2
+```
+
+# ⚠️ OBS ⚠️
+
+Toda e qualquer string perde os acentos (ã,é, etc) e vai para lowercase. Isso é feito para facilitar o acesso (ex: poder acessar Matemática usando 'matematica' ou 'Matematica'). Se essa feature for um problema, por favor, abra um issue me avisando que eu posso implementar uma forma de forçar que ele verifique EXATAMENTE caracter por caracter, sem conversão alguma.
 
 ---
 <div align="center">
