@@ -29,21 +29,22 @@ import {
 export async function createToken(
     req: Request<{}, ApiResponse<NsacAuthResponse>, BasicNsacApiRequest>,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ) {
     try {
         const { email, password } = req.body;
 
         // acho que é impossível chegar aq por causa dos middlewares mas pro typescript n encher o saco é isso ai
 
-        const jwtToken = req.headers.authorization!.split(" ")[1];
+        const authHeader = req.headers.authorization;
+        const jwtToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
         const masterToken = req.headers["x-master-token"] as string;
 
         if (!jwtToken && !masterToken) {
             throw new AppError(
                 "Invalid JWT token format and no x-master-token provided",
                 401,
-                "AUTH_INVALID_PAYLOAD"
+                "AUTH_INVALID_PAYLOAD",
             );
         }
 
@@ -52,7 +53,7 @@ export async function createToken(
             const { id_user } = await queryOne<Users>(
                 "SELECT id_User FROM Users WHERE masterToken = ?",
                 [masterToken],
-                db
+                db,
             );
             userId = id_user + "";
         }
@@ -79,16 +80,15 @@ export async function createToken(
         const existingAccount = await queryOne<{ id_nsacaccount: number }>(
             "SELECT id_NsacAccount FROM NsacAccount WHERE email = ?",
             [email],
-            db
+            db,
         );
 
-        if (existingAccount) 
-            nsacAccountId = existingAccount.id_nsacaccount;
-         else {
+        if (existingAccount) nsacAccountId = existingAccount.id_nsacaccount;
+        else {
             nsacAccountId = await insertSql(
                 "INSERT INTO NsacAccount(id_User, email, password) VALUES (?, ?, ?) RETURNING id_NsacAccount",
                 [userId, email, encryptedPassword],
-                db
+                db,
             );
         }
 
@@ -96,27 +96,27 @@ export async function createToken(
             throw new AppError(
                 "Failed to resolve nsacAccountId while creating token.",
                 500,
-                "SERVER_DB_ERROR"
+                "SERVER_DB_ERROR",
             );
         }
 
         await runSql(
             "DELETE FROM apiToken WHERE id_User = ? AND id_NsacAccount = ?",
             [userId, nsacAccountId],
-            db
+            db,
         );
 
         const apiTokenId = await insertSql(
             "INSERT INTO apiToken(id_User, id_NsacAccount, cookieString, token) VALUES (?, ?, ?, ?) RETURNING id_Token",
             [userId, nsacAccountId, encryptedCookie, apiToken],
-            db
+            db,
         );
 
         if (!apiTokenId) {
             throw new AppError(
                 "Failed to insert apiToken while creating token.",
                 500,
-                "SERVER_DB_ERROR"
+                "SERVER_DB_ERROR",
             );
         }
 
@@ -136,26 +136,37 @@ export async function createToken(
 export async function getTokens(
     req: Request<{}, ApiResponse<NsacTokensResponse>>,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ) {
     try {
-        if (!req.headers.authorization) {
+        if (!req.headers.authorization && !req.headers["x-master-token"]) {
             throw new AppError("No Authorization header", 401, "AUTH_HEADER_MISSING");
         }
 
-        const jwtToken = req.headers.authorization.split(" ")[1] as string;
-        const payload = jwt.decode(jwtToken) as unknown as JwtTokenPayload;
+        const authHeader = req.headers.authorization;
+        const jwtToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+        const masterToken = req.headers["x-master-token"] as string;
 
+        let payload;
+
+        if (jwtToken) {
+            payload = jwt.decode(jwtToken) as unknown as JwtTokenPayload;
+        }
         if (!payload || !payload.id_user) {
             throw new AppError("Invalid JWT payload", 401, "AUTH_INVALID_TOKEN");
         }
 
-        const userId = payload.id_user;
-
+        let userId
+        
+        if(jwtToken){ 
+            userId = payload.id_user;
+        } else if(masterToken){
+            userId = await queryOne("SELECT id_User FROM Users WHERE masterToken = ?", [masterToken], db);
+        }
         const apiTokens = await getSql<NsacToken>(
             "SELECT token, id_NsacAccount FROM apiToken WHERE id_User = ?",
             [userId],
-            db
+            db,
         );
 
         const data: NsacTokensResponse = apiTokens;
@@ -178,7 +189,7 @@ export async function checkApiKeyAuth(req: Request, res: Response, next: NextFun
         const tokenExists = await queryOne(
             "SELECT 1 FROM ApiToken WHERE token = ?",
             [APIToken],
-            db
+            db,
         );
 
         if (tokenExists) {
@@ -194,7 +205,7 @@ export async function checkApiKeyAuth(req: Request, res: Response, next: NextFun
 export async function deleteTokens(
     req: Request<{}, ApiResponse<DeleteTokenResponse>, DeleteTokenRequest>,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ) {
     const { token } = req.body;
 
@@ -209,7 +220,7 @@ export async function deleteTokens(
             return res.status(200).json(
                 success({
                     message: "Success! Token unlinked from your account and deleted from DB.",
-                })
+                }),
             );
         } else {
             throw new AppError("Nothing was changed (wrong API Key?)", 404, "TOKEN_NOT_FOUND");
@@ -222,7 +233,7 @@ export async function deleteTokens(
 export async function getApiGrades(
     req: Request<{}, ApiResponse<any>, {}, QueryFilter>,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ) {
     const apiToken = req.headers["x-api-token"] as string;
 
@@ -242,14 +253,14 @@ export async function getApiGrades(
         const tokenData = await queryOne<ApiToken>(
             "SELECT cookieString FROM apiToken WHERE token = ?",
             [apiToken],
-            db
+            db,
         );
 
         if (!tokenData) {
             throw new AppError(
                 "Invalid token or not found (internal server error)",
                 401,
-                "INVALID_API_TOKEN"
+                "INVALID_API_TOKEN",
             );
         }
 
