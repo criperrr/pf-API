@@ -12,6 +12,7 @@
     <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
     <img src="https://img.shields.io/badge/Cheerio--orange?style=for-the-badge&logo=cheerio" alt="Cheerio Badge">
     <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge">
+    <img src="https://img.shields.io/badge/Netlify--32e6e2?style=for-the-badge&logo=netlify" alt="Netlify">
 </div>
 
 ---
@@ -54,6 +55,9 @@ Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o l
 * <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge"> <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
   
   [Supabase](https://supabase.com) é uma plataforma de desenvolvimento [PostgreSQL](https://www.postgresql.org/) que utiliza os AWS para a fácil manutenção de bancos de dados PostgreSQL. Nós utilizamos essa plataforma para armazenar gratuitamente os dados da API.
+* <img src="https://img.shields.io/badge/Netlify--32e6e2?style=for-the-badge&logo=netlify" alt="Netlify">
+  
+  [Netlify](https://www.netlify.com/) é um serviço de hospedagens gratuito que oferece o [Netlify Functions](https://www.netlify.com/platform/core/functions/), baseado em AWS Lambda. O projeto foi originalmente feito somente com o Express, entretanto, dps de expandir ele, decidimos usar o [serverless-http](https://github.com/dougmoscrop/serverless-http) pra adaptar para o modelo serverless e usar o netlify functions.
 
 ---
 
@@ -77,7 +81,7 @@ sudo pacman -Syu && sudo pacman -S nodejs npm git
 ```
 de resto, pode fazer exatamente igual.
 ### 2. Baixando e Instalando
-Abra o **PowerShell** ou o Terminal do VS Code e digite:
+Abra o **PowerShell/seu shell** ou o Terminal do VS Code e digite:
 
 ```bash
 # 1. Clone o repositório
@@ -101,7 +105,6 @@ PORT="3000"
 
 # Chave secreta para assinar os Logins da API (Invente uma senha difícil)
 SECRETKEY="batatinha_frita_123"
-
 # Chave para criptografar os dados do NSAC (AES-256).
 # ATENÇÃO: Precisa ser uma chave Hexadecimal de 32 bytes (64 caracteres).
 # Dica: Abra o node no terminal e rode: require('node:crypto').randomBytes(32).toString('hex')
@@ -118,7 +121,6 @@ DBSTRING="SUA_STRING_DE_CONEXAO_AQUI"
 npm run dev
 ```
 Se aparecer `RUNNING at 3000`, parabéns! 🎉 A API está viva.
-
 ---
 
 # 📚 Documentação da API
