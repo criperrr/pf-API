@@ -1,5 +1,4 @@
 -- Usei o Postgres gratuito da https://supabase.com.
-
 CREATE TABLE IF NOT EXISTS Users (
     id_User SERIAL PRIMARY KEY,
     name TEXT NOT NULL,

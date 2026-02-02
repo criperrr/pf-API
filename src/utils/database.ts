@@ -8,11 +8,15 @@ if (!connectionString) {
     process.exit(1);
 }
 
-const db = new Pool({
+let db: Pool = new Pool({
     connectionString,
-    ssl: {
-        rejectUnauthorized: false,
-    },
+    ssl: { rejectUnauthorized: false },
+    max: 1,
+    idleTimeoutMillis: 30000,
+});
+
+db.on("error", (err) => {
+    console.log("Error in db connection:", err);
 });
 
 // try {
@@ -23,12 +27,6 @@ const db = new Pool({
 //     console.log("Error while connecting to PostgreSQL!");
 //     console.log(err)
 // }
-
-
-db.on("error", (err) => {
-    console.log("Error while connecting: ");
-    console.log(err);
-});
 
 const createUserTable = `
 CREATE TABLE IF NOT EXISTS Users (

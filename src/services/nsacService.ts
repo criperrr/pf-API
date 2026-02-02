@@ -13,14 +13,12 @@ import {
 } from "../utils/typeFilters.js";
 
 export function filterQuery(grades: AllYearsResponse, query: QueryFilter): AllYearsResponse {
-    console.log(query);
     let filteredData: YearInfo[] = [...grades.data];
 
     if (query.schoolYear !== undefined) {
         const yearFilter = query.schoolYear as NumberFilter | Record<"0", number>;
 
         filteredData = filteredData.filter((_, i) => {
-            console.log(i + 1, yearFilter);
             return checkNumberFilters(i + 1, yearFilter);
         });
     }
@@ -106,17 +104,12 @@ export function filterQuery(grades: AllYearsResponse, query: QueryFilter): AllYe
         filteredData = filteredData.map((yearInfo) => {
             yearInfo.grades = yearInfo.grades.filter((fullGrades) => {
                 fullGrades.bimesters = fullGrades.bimesters.filter((bimester) => {
-                    console.log(bimester.personal.recoveryCode, recoveryCodeFilter);
                     if (bimester.personal.recoveryCode) {
-                        console.log(
-                            checkStringFilters(bimester.personal.recoveryCode, recoveryCodeFilter)
-                        );
                         return checkStringFilters(
                             bimester.personal.recoveryCode,
                             recoveryCodeFilter
                         );
                     } else {
-                        console.log(checkStringFilters("NAC", recoveryCodeFilter));
                         return checkStringFilters("NAC", recoveryCodeFilter);
                     }
                 });

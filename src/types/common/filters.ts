@@ -23,10 +23,10 @@ export type FilterBuilder<T> = {
     [K in keyof T]?: T[K] extends number | undefined
         ? NumberFilter | number
         : T[K] extends string | undefined
-        ? StringFilter | string
-        : T[K] extends boolean | undefined
-        ? BooleanFilter | boolean
-        : T[K];
+          ? StringFilter | string
+          : T[K] extends boolean | undefined
+            ? BooleanFilter | boolean
+            : T[K];
 };
 
 export interface GradeQueryFields {
