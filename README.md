@@ -141,73 +141,114 @@ A API utiliza uma arquitetura de **dois níveis de autenticação**:
 1.  **Tokens de Gerenciamento:** (JWT ou Master Token) para vincular e desvincular contas.
 2.  **Tokens de Consulta:** (`x-api-token`) para realizar o scraping das notas.
 
-## 🔐 1. Autenticação (Conta da API)
+---
 
-Gerencia quem tem permissão para usar o serviço de scraping.
+## 🔐 1. Autenticação (Conta da API)
 
 ### Registrar Usuário
 `POST /auth/register`
-*   **Corpo (JSON):** 
+*   **Body:** `{ "name": "...", "email": "...", "password": "..." }`
+*   **Resposta (201):**
     ```json
-    { "name": "Seu Nome", "email": "dev@exemplo.com", "password": "senha_forte" }
+    {
+      "success": true,
+      "data": { "message": "Users created successfully!", "userId": 1 }
+    }
     ```
 
 ### Login
 `POST /auth/login`
-*   **Corpo (JSON):** 
-    ```json
-    { "email": "dev@exemplo.com", "password": "senha_forte" }
-    ```
-*   **Resposta:** O Token JWT é retornado no **Header** `Authorization` no formato `Bearer <TOKEN>`.
+*   **Body:** `{ "email": "...", "password": "..." }`
+*   **Header de Resposta:** `Authorization: Bearer <JWT_TOKEN>`
 
-### Criar Master Token (Permanente)
+### Gerar Master Token (Permanente)
 `POST /auth/tokens`
-*   **Header:** `Authorization: Bearer <SEU_JWT>`
-*   **Descrição:** Gera um token que não expira, útil para integrações via código.
-*   **Resposta:** Retorna o `masterToken`.
-
----
-
-## 🏫 2. Gerenciamento NSAC (`/nsac/accounts`)
-
-Vincula suas credenciais do portal acadêmico à API para gerar tokens de consulta.
-
-### Vincular Conta e Gerar Token de Consulta
-`POST /nsac/accounts`
-*   **Header (Um dos dois):** 
-    *   `Authorization: Bearer <SEU_JWT>`
-    *   `x-master-token: <SEU_MASTER_TOKEN>`
-*   **Corpo (JSON):** 
+*   **Auth:** `Bearer <JWT_TOKEN>`
+*   **Descrição:** Gera um token que não expira para automações.
+*   **Resposta:**
     ```json
-    { "email": "aluno@unesp.br", "password": "senha_do_nsac" }
+    {
+      "success": true,
+      "data": { "message": "Token created successfully", "masterToken": "BEB7..." }
+    }
     ```
-*   **Descrição:** Faz login no NSAC, salva a sessão criptografada e retorna o `apiToken`.
-
-### Verificar Status do Token
-`GET /nsac/accounts/token-status`
-*   **Header:** `x-api-token: <SEU_API_TOKEN_NSAC>`
-*   **Descrição:** Verifica se o token informado existe e é válido no banco de dados.
-
-### Listar Meus Tokens
-`GET /nsac/accounts`
-*   **Header:** `Authorization: Bearer <SEU_JWT>`
-
-### Remover/Desvincular Token
-`DELETE /nsac/accounts`
-*   **Header:** `Authorization: Bearer <SEU_JWT>`
-*   **Corpo (JSON):** `{ "token": "TOKEN_PARA_DELETAR" }`
 
 ---
 
-## 📊 3. Notas e Scraping (`/nsac/grades`)
+## 🏫 2. Contas NSAC (`/nsac/accounts`)
 
-### Consultar Boletim (Com Filtros)
+### Vincular Conta e Gerar `apiToken`
+`POST /nsac/accounts`
+*   **Auth:** `Bearer <JWT>` ou `x-master-token: <TOKEN>`
+*   **Body:** `{ "email": "aluno@unesp.br", "password": "..." }`
+*   **Resposta:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "message": "Token created successfully",
+        "apiToken": "TOK3N_GERAD0_..."
+      }
+    }
+    ```
+
+---
+
+## 📊 3. Notas e Boletim (`/nsac/grades`)
+
+### Consultar Boletim
 `GET /nsac/grades`
-*   **Header Obrigatório:** `x-api-token: <SEU_API_TOKEN_NSAC>`
-*   **Descrição:** Extrai os dados do portal em tempo real (ou via cache de sessão).
+*   **Header:** `x-api-token: <SEU_API_TOKEN_NSAC>`
+*   **Query Params:** Veja a seção de filtros abaixo.
 
----
-
+#### Exemplo de Resposta (Sucesso):
+```json
+{
+    "success": true,
+    "data": {
+        "warning": false,
+        "userCurrentYear": 3,
+        "filteredGrades": {
+            "warning": false,
+            "userCurrentYear": 3,
+            "data": [
+                {
+                    "title": "INI1",
+                    "year": 2024,
+                    "status": "Aprovado",
+                    "grades": [
+                        {
+                            "subjectName": "Fundamentos de Informática",
+                            "results": { "grade": 8.1, "totalAbsences": 2 },
+                            "bimesters": [
+                                {
+                                    "bimester": 4,
+                                    "personal": {
+                                        "grade": 6,
+                                        "recovery": true,
+                                        "absences": 0,
+                                        "recovered": true,
+                                        "recoveryCode": "SAT",
+                                        "recoveryMessage": "Satisfatório"
+                                    },
+                                    "class": { "averageGrade": 7.5 }
+                                }
+                            ]
+                        }
+                    ],
+                    "bimestersMetrics": [
+                        { "userAverage": 7.87, "classAverage": 7.81, "totalAbsences": 12 }
+                    ]
+                }
+            ]
+        }
+    }
+}
+```
+query usada:
+```http
+GET https://url_base/nsac/grades?isRecovery=true
+```
 # 🧠 Guia Completo de Filtragem (NSAC Service)
 
 A API do NSAC permite que você realize consultas altamente granulares diretamente via Query Parameters. O motor de filtragem processa o JSON de retorno e remove dinamicamente os objetos que não correspondem aos critérios definidos, mantendo a integridade da estrutura de dados.
@@ -296,6 +337,29 @@ GET /api/nsac/grades?schoolYear=3&subjectName[contains]=Mat,Fis&grade[lt]=6&targ
 # ⚠️ OBS ⚠️
 
 Toda e qualquer string perde os acentos (ã,é, etc) e vai para lowercase. Isso é feito para facilitar o acesso (ex: poder acessar Matemática usando 'matematica' ou 'Matematica'). Se essa feature for um problema, por favor, abra um issue me avisando que eu posso implementar uma forma de forçar que ele verifique EXATAMENTE caracter por caracter, sem conversão alguma.
+
+## 🛠️ Erros e Respostas Padrão
+
+Todas as respostas seguem um padrão único para facilitar o consumo por Front-ends ou Bots.
+
+### Sucesso
+```json
+{ "success": true, "data": { ... } }
+```
+
+### Erro
+```json
+{
+    "success": false,
+    "errors": [
+        {
+            "code": "AUTH_INVALID_TOKEN",
+            "message": "Invalid JWT token",
+            "field": "authorization" 
+        }
+    ]
+}
+```
 
 ---
 <div align="center">
