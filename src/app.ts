@@ -1,7 +1,7 @@
 const useServerless = !!process.env.AWS_LAMBDA_FUNCTION_NAME; // Auto injected env variable from AWS
 
 import e from "express";
-if (!useServerless) await import("dotenv/config");
+if (!useServerless) require("dotenv").config(); // sorry
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
 import serverless from "serverless-http";
