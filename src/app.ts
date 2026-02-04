@@ -1,22 +1,19 @@
+const useServerless = !!process.env.AWS_LAMBDA_FUNCTION_NAME; // Auto injected env variable from AWS
+
 import e from "express";
-/* drop dotenv bc env variables are in netlify process now */
-// import "dotenv/config";
+if (!useServerless) await import("dotenv/config");
 import authRoutes from "./routes/v1/authRoutes.js";
 import nsacRoutes from "./routes/v1/nsacRoutes.js";
+import serverless from "serverless-http";
 import cors from "cors";
 import { globalErrorHandling } from "./utils/errorHandler.js";
 const app = e();
-
-const args = process.argv.slice(2);
-const serverlessModeArg = args.find((arg) => arg.startsWith("--serverless-mode="));
-const useServerless = serverlessModeArg ? serverlessModeArg.split("=")[1] === "true" : false;
 
 app.set("query parser", "extended");
 app.use(e.json());
 app.use(e.urlencoded({ extended: true }));
 app.use(cors());
 
-/* TESTING IMPLEMENTATION OF SERVERLESS-HTTP */
 if (!useServerless) {
     const port = process.env.PORT || 3000;
     app.listen(port, async () => {
@@ -26,10 +23,10 @@ if (!useServerless) {
         // if you want to use function above import ensureDbCreated from database.ts
     });
 }
-/* ***************************************** */
+
 app.use("/api/nsac", nsacRoutes);
 app.use("/api/auth", authRoutes);
 
 app.use(globalErrorHandling);
 
-export default app;
+export const handler = serverless(app, { provider: "aws" });

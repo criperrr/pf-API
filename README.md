@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
     <img src="https://img.shields.io/badge/Cheerio--orange?style=for-the-badge&logo=cheerio" alt="Cheerio Badge">
     <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge">
-    <img src="https://img.shields.io/badge/Netlify--32e6e2?style=for-the-badge&logo=netlify" alt="Netlify">
+    <img src="https://img.shields.io/badge/AWS lambda-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS">
 </div>
 
 ---
@@ -55,9 +55,9 @@ Esta API funciona como uma "ponte" (ou Middleware). Ela vai até o NSAC, faz o l
 * <img src="https://img.shields.io/badge/Postgresql-17.x-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge"> <img src="https://img.shields.io/badge/Supabase--3ecf8e?style=for-the-badge&logo=supabase" alt="SupaBase Badge">
   
   [Supabase](https://supabase.com) é uma plataforma de desenvolvimento [PostgreSQL](https://www.postgresql.org/) que utiliza os AWS para a fácil manutenção de bancos de dados PostgreSQL. Nós utilizamos essa plataforma para armazenar gratuitamente os dados da API.
-* <img src="https://img.shields.io/badge/Netlify--32e6e2?style=for-the-badge&logo=netlify" alt="Netlify">
+* <img src="https://img.shields.io/badge/AWS lambda-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS">
   
-  [Netlify](https://www.netlify.com/) é um serviço de hospedagens gratuito que oferece o [Netlify Functions](https://www.netlify.com/platform/core/functions/), baseado em AWS Lambda. O projeto foi originalmente feito somente com o Express, entretanto, dps de expandir ele, decidimos usar o [serverless-http](https://github.com/dougmoscrop/serverless-http) pra adaptar para o modelo serverless e usar o netlify functions.
+  [Amazon Web Services](https://aws.amazon.com/pt/) é um conjunto de ferramentas para desenvolvimento web feito e mantido pela Amazon. O projeto usa o microserviço [Lambda](https://aws.amazon.com/pt/lambda/) para a hospedagem.
 
 ---
 
@@ -68,7 +68,7 @@ Se você nunca rodou um projeto Node backend, segue o passo a passo:
 ### 1. Pré-requisitos
 *   **Node.js:** Baixe e instale a versão LTS [aqui](https://nodejs.org/).
 *   **Git:** Baixe e instale [aqui](https://git-scm.com/).
-*   **VS Code** (Opcional, mas recomendado).
+*   **VS Code** (Opcional, mas recomendado) Baixe e instale [aqui](https://code.visualstudio.com/).
 ##### Se você usa linux, apenas rode:
 ```bash
 # distros debian-based
@@ -91,7 +91,7 @@ git clone https://github.com/criperrr/pf-API.git
 cd pf-API
 
 # 3. Instale as dependências (libs que o projeto usa)
-npm install
+npm install # ou, simplesmente:  npm i
 ```
 
 ### 3. Configurando o Ambiente (.env)
@@ -123,18 +123,20 @@ npm run dev
 Se aparecer `RUNNING at 3000`, parabéns! 🎉 A API está viva.
 
 #### 4.1 Serverless
-Se quiser testar, você também pode testar o serverless com netlify.
-Entretanto, certifique-se de ter o netlify-cli instalado e totalmente configurado com sua conta e um projeto.
-Com tudo configurado, simplesmente execute:
+Se quiser testar, você também pode testar o serverless com aws.
+
 ```bash
-npm run dev-serverless
+npm run build
 ``` 
+
+Isso vai gerar um arquivo index.js que tem toda a API num único arquivo. Você deve zipar ele e upar no AWS Lambda pelo Console do AWS. Simples assim e habilitando o endpoint da Lambda - além de, claro, setar as variáveis de ambiente nas configurações dela - sua própria instancia da API está rodando bonitinha!
+
 ---
 
 # 📚 Documentação da API
 
 **URL Base:** `http://localhost:3000/api`
-**URL Pública base:** `https://api-nsac.netlify.app/api` _(Não posso garantir que ela está funcionando quando vc estiver vendo isso)_
+**URL Pública base:** `https://irv7tssbkszbf4qpwq3d6im2by0oypoz.lambda-url.us-east-1.on.aws/` _(Não posso garantir que ela está funcionando quando vc estiver vendo isso)_
 **URL base (serverless):** `http://localhost:8888/api`
 
 A API utiliza uma arquitetura de **dois níveis de autenticação**:
@@ -146,7 +148,9 @@ A API utiliza uma arquitetura de **dois níveis de autenticação**:
 ## 🔐 1. Autenticação (Conta da API)
 
 ### Registrar Usuário
-`POST /auth/register`
+```http
+POST /auth/register
+```
 *   **Body:** `{ "name": "...", "email": "...", "password": "..." }`
 *   **Resposta (201):**
     ```json
@@ -157,12 +161,16 @@ A API utiliza uma arquitetura de **dois níveis de autenticação**:
     ```
 
 ### Login
-`POST /auth/login`
+```http
+POST /auth/login
+```
 *   **Body:** `{ "email": "...", "password": "..." }`
 *   **Header de Resposta:** `Authorization: Bearer <JWT_TOKEN>`
 
 ### Gerar Master Token (Permanente)
-`POST /auth/tokens`
+```http
+POST /auth/tokens
+```
 *   **Auth:** `Bearer <JWT_TOKEN>`
 *   **Descrição:** Gera um token que não expira para automações.
 *   **Resposta:**
@@ -178,7 +186,9 @@ A API utiliza uma arquitetura de **dois níveis de autenticação**:
 ## 🏫 2. Contas NSAC (`/nsac/accounts`)
 
 ### Vincular Conta e Gerar `apiToken`
-`POST /nsac/accounts`
+```http
+POST /nsac/accounts
+```
 *   **Auth:** `Bearer <JWT>` ou `x-master-token: <TOKEN>`
 *   **Body:** `{ "email": "aluno@unesp.br", "password": "..." }`
 *   **Resposta:**
@@ -197,7 +207,9 @@ A API utiliza uma arquitetura de **dois níveis de autenticação**:
 ## 📊 3. Notas e Boletim (`/nsac/grades`)
 
 ### Consultar Boletim
-`GET /nsac/grades`
+```http
+GET /nsac/grades
+```
 *   **Header:** `x-api-token: <SEU_API_TOKEN_NSAC>`
 *   **Query Params:** Veja a seção de filtros abaixo.
 
@@ -296,31 +308,51 @@ Dependendo do tipo do campo, você pode utilizar operadores para refinar a busca
 
 ### 1. Filtros Básicos e Posicionais
 * **Apenas dados do 2º Ano:**
-    `GET /api/nsac/grades?schoolYear=2`
+    ```http
+    GET /api/nsac/grades?schoolYear=2
+    ```
 * **Apenas notas do 4º Bimestre:**
-    `GET /api/nsac/grades?targetBimester=4`
+    ```http
+    GET /api/nsac/grades?targetBimester=4
+    ```
 
 ### 2. Filtros de Performance Acadêmica
 * **Matérias onde a nota foi menor que 5.0:**
-    `GET /api/nsac/grades?grade[lt]=5`
+    ```http
+    GET /api/nsac/grades?grade[lt]=5
+    ```
 * **Matérias com nota entre 7 e 9:**
-    `GET /api/nsac/grades?grade[gte]=7&grade[lte]=9`
+    ```http
+    GET /api/nsac/grades?grade[gte]=7&grade[lte]=9
+    ```
 * **Onde a média da classe foi maior que 8.0:**
-    `GET /api/nsac/grades?classAverage[gt]=8`
+    ```http
+    GET /api/nsac/grades?classAverage[gt]=8
+    ```
 
 ### 3. Recuperação e Status
 * **Listar apenas bimestres onde o aluno está em recuperação:**
-    `GET /api/nsac/grades?isRecovery=true`
+    ```http
+    GET /api/nsac/grades?isRecovery=true
+    ```
 * **Filtrar por código de recuperação específico (no exemplo, pega qualquer caso diferente de NAC):**
-    `GET /api/nsac/grades?recoveryCode=INS,SAT,NCP`
+    ```http
+    GET /api/nsac/grades?recoveryCode=INS,SAT,NCP
+    ```
 * **Disciplinas sem código de recuperação (Status Não AConteceu):**
-    `GET /api/nsac/grades?recoveryCode[eq]=NAC`
+    ```http
+    GET /api/nsac/grades?recoveryCode[eq]=NAC
+    ```
 
 ### 4. Busca Textual Avançada
 * **Disciplinas de Exatas (Matemática, Física, etc):**
-    `GET /api/nsac/grades?subjectName[contains]=Mat,Fis`
+    ```http
+    GET /api/nsac/grades?subjectName[contains]=Mat,Fis
+    ```
 * **Disciplinas que começam com "Língua":**
-    `GET /api/nsac/grades?subjectName[startsWith]=Lingua`
+    ```http
+    GET /api/nsac/grades?subjectName[startsWith]=Lingua
+    ```
 
 ---
 
@@ -344,7 +376,7 @@ Todas as respostas seguem um padrão único para facilitar o consumo por Front-e
 
 ### Sucesso
 ```json
-{ "success": true, "data": { ... } }
+{ "success": true, "data": { "..." } }
 ```
 
 ### Erro
